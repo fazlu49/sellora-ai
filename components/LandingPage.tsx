@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { BrandLogo } from "./BrandLogo";
 import { PosterCanvas } from "./PosterCanvas";
+import { InstallAppButton } from "./InstallAppButton";
 import { BrandKit, Language, PlanTier, PosterTemplateId } from "@/lib/types";
 import {
   ArrowRight,
@@ -91,6 +92,8 @@ const HERO_SAMPLES: Array<{
 
 const TEMPLATE_PILLS: Array<{ id: PosterTemplateId; bn: string; en: string }> = [
   { id: "magenta_luxe", bn: "ম্যাজেন্টা লাক্স", en: "Magenta Luxe" },
+  { id: "festive_emerald", bn: "ঈদ / উৎসব লাক্স", en: "Festive Gold" },
+  { id: "crimson_flash", bn: "ধামাকা ফ্ল্যাশ", en: "Flash Red" },
   { id: "dark_executive", bn: "ডার্ক প্রিমিয়াম", en: "Dark Studio" },
   { id: "minimal_boutique", bn: "মিনিমাল বুটিক", en: "Minimal Boutique" },
   { id: "flash_split", bn: "ফ্ল্যাশ স্প্লিট", en: "Flash Split" },
@@ -185,10 +188,14 @@ export function LandingPage({
               </button>
             </div>
 
+            <div className="hidden sm:block">
+              <InstallAppButton lang={lang} compact />
+            </div>
+
             <button
               type="button"
               onClick={onLoginClick}
-              className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:text-sm"
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:text-sm"
             >
               {lang === "bn" ? "লগইন" : "Login"}
             </button>
@@ -268,7 +275,11 @@ export function LandingPage({
               </button>
             </div>
 
-            <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-semibold text-slate-500 sm:text-sm">
+            <div className="mt-5 flex items-center gap-3 sm:hidden">
+              <InstallAppButton lang={lang} compact />
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-semibold text-slate-500 sm:text-sm">
               <span className="inline-flex items-center gap-1.5">
                 <Check className="h-4 w-4 text-emerald-600" />
                 {lang === "bn"
@@ -344,6 +355,7 @@ export function LandingPage({
                       ? `অর্ডার করুন: ${SHOWCASE_BRAND.phoneWhatsapp}`
                       : `Order Now: ${SHOWCASE_BRAND.phoneWhatsapp}`,
                   productImageUrl: activeSample.img,
+                  showQr: true,
                 }}
                 brandKit={SHOWCASE_BRAND}
                 regularPrice={activeSample.reg}
@@ -352,7 +364,7 @@ export function LandingPage({
               />
 
               {/* Template Style Selector Pills */}
-              <div className="mt-3.5 grid grid-cols-4 gap-1.5">
+              <div className="mt-3.5 grid grid-cols-3 gap-1.5">
                 {TEMPLATE_PILLS.map((tpl) => (
                   <button
                     key={tpl.id}
@@ -386,54 +398,78 @@ export function LandingPage({
           </h2>
         </div>
 
-        <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
-          <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-xs">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
-              <ImageIcon className="h-6 w-6" />
+        <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[
+            {
+              titleBn: "১. ৬টি প্রিমিয়াম HD পোস্টার ও WhatsApp QR কোড",
+              titleEn: "1. 6 HD Poster Styles + Scannable WhatsApp QR",
+              descBn:
+                "ভাঙা বাংলা অক্ষর নয়—আপনার দোকানের লোগো, ছাড় % ব্যাজ, দাম এবং স্ক্যান-টু-অর্ডার QR কোডসহ ১০৮০px পোস্টার ডাউনলোড করুন।",
+              descEn:
+                "Export crisp 1080px Bengali promo banners with auto discount badges, shop branding, and instant WhatsApp order QR codes.",
+            },
+            {
+              titleBn: "২. ৩ ধরনের পরীক্ষিত Facebook Boost Ad Copy",
+              titleEn: "2. 3 High-Converting Facebook Boost Hooks",
+              descBn:
+                "প্রতিটি পণ্যের জন্য আলাদা অফার হুক, ক্যাশ-অন-ডেলিভারি ট্রাস্ট হুক এবং স্টোরিটেলিং ক্যাপশন তৈরি হয় এক ক্লিকে।",
+              descEn:
+                "Get three ready-to-post ad angles—Scarcity Offer, Zero-Risk COD Trust, and Restock Storytelling.",
+            },
+            {
+              titleBn: "৩. ৩০-সেকেন্ড ভাইরাল Reels ও TikTok স্ক্রিপ্ট",
+              titleEn: "3. 30-Second Viral Reels & TikTok Script Maker",
+              descBn:
+                "ক্যামেরার সামনে কী বলবেন ভাবতে হবে না—প্রতি সেকেন্ডের দৃশ্য ও ভয়েসওভার সাজানো রেডি বাংলা ভিডিও স্ক্রিপ্ট পান।",
+              descEn:
+                "Turn raw product videos into viral Reels with scene-by-scene hooks, close-up prompts, and voiceover scripts.",
+            },
+            {
+              titleBn: "৪. ডিজিটাল ক্যাশ মেমো ও কুরিয়ার স্লিপ মেকার",
+              titleEn: "4. Branded Digital Cash Memo & Parcel Slip",
+              descBn:
+                "কাস্টমারের নাম, ঠিকানা ও অগ্রিম টাকা বসিয়ে ১ ক্লিকে দোকানের নামসহ HD ক্যাশ মেমো ছবি ডাউনলোড করে মেসেঞ্জারে পাঠান!",
+              descEn:
+                "Generate professional COD invoices and copy Steadfast/Pathao booking summaries in one click.",
+            },
+            {
+              titleBn: "৫. ইনবক্স ও কমেন্ট সেলস ক্লোজার স্ক্রিপ্ট",
+              titleEn: "5. Instant Inbox & Comment Sales Closer",
+              descBn:
+                '"দাম কত?", "অরিজিনাল হবে তো?", "দাম কমান"—প্রতিটি প্রশ্নের কনভিন্সিং উত্তর কপি করে মেসেঞ্জারে পাঠান।',
+              descEn:
+                "Convert Messenger inquiries faster with persuasive pre-written replies for every customer objection.",
+            },
+            {
+              titleBn: "৬. আসল লাভ ও Facebook Boost ক্যালকুলেটর",
+              titleEn: "6. True Net Profit & Boost ROI Calculator",
+              descBn:
+                "ডলার খরচ, প্যাকেজিং ও পার্সেল রিটার্ন বাদ দিয়ে আপনার পকেটে আসল কত টাকা লাভ থাকছে তা মুহূর্তেই হিসাব করুন।",
+              descEn:
+                "Know your exact net profit in BDT after USD ad spend, packaging, and courier return losses.",
+            },
+          ].map((feat, idx) => (
+            <div
+              key={feat.titleEn}
+              className="rounded-3xl border border-slate-200 bg-white p-7 shadow-xs transition hover:border-rose-200 hover:shadow-md"
+            >
+              <div
+                className={`mb-4 flex h-11 w-11 items-center justify-center rounded-2xl text-sm font-extrabold ${
+                  idx % 2 === 1
+                    ? "bg-slate-900 text-rose-400"
+                    : "bg-rose-50 text-rose-600"
+                }`}
+              >
+                0{idx + 1}
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">
+                {lang === "bn" ? feat.titleBn : feat.titleEn}
+              </h3>
+              <p className="mt-2.5 text-sm leading-relaxed text-slate-600">
+                {lang === "bn" ? feat.descBn : feat.descEn}
+              </p>
             </div>
-            <h3 className="text-xl font-bold text-slate-900">
-              {lang === "bn"
-                ? "১. ভাঙা বাংলা অক্ষর নয় — ১০০% নিখুঁত HD পোস্টার"
-                : "1. Zero Broken Bangla Fonts — 1080px HD Posters"}
-            </h3>
-            <p className="mt-2.5 text-sm leading-relaxed text-slate-600">
-              {lang === "bn"
-                ? "সাধারণ AI ইমেজ টুলে বাংলা বানান ভেঙে যায়। আমাদের Smart Canvas ইঞ্জিনে আপনার দোকানের লোগো, পণ্যের ছবি, ছাড় % ব্যাজ ও WhatsApp নম্বর একদম প্রিন্ট-কোয়ালিটিতে বসে।"
-                : "Generic AI image tools garble Bengali text. Our dedicated studio engine renders razor-sharp Hind Siliguri typography, auto discount badges, and your shop branding."}
-            </p>
-          </div>
-
-          <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-xs">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-rose-400">
-              <Sparkles className="h-6 w-6" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-900">
-              {lang === "bn"
-                ? "২. ৩ ধরনের পরীক্ষিত Facebook Boost Ad Copy"
-                : "2. 3 High-Converting Facebook Boost Hooks"}
-            </h3>
-            <p className="mt-2.5 text-sm leading-relaxed text-slate-600">
-              {lang === "bn"
-                ? "প্রতিটি পণ্যের জন্য আলাদাভাবে অফার হুক, ক্যাশ-অন-ডেলিভারি ট্রাস্ট হুক এবং রিস্টক স্টোরিটেলিং কপি তৈরি হয়—বাংলা, বাংলিশ অথবা ইংরেজিতে।"
-                : "Get three ready-to-run Meta ad variations per product—Urgency Hook, Zero-Risk COD Trust Angle, and Restock Social Proof—in Bangla, Banglish, or English."}
-            </p>
-          </div>
-
-          <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-xs">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
-              <MessageSquareText className="h-6 w-6" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-900">
-              {lang === "bn"
-                ? "৩. ইনবক্স ও কমেন্ট ক্লোজার স্ক্রিপ্ট ব্যাংক"
-                : "3. Instant Inbox & Comment Sales Closer"}
-            </h3>
-            <p className="mt-2.5 text-sm leading-relaxed text-slate-600">
-              {lang === "bn"
-                ? '"দাম কত?", "অরিজিনাল হবে তো?", "ঢাকার বাইরে বিকাশ অ্যাডভান্স কেন দেবো?"—প্রতিটি প্রশ্নের রেডি উত্তর ১ ক্লিকে কপি করে মেসেঞ্জারে পাঠান।'
-                : 'Turn "Price please?" comments into confirmed orders with pre-personalized replies for pricing, authenticity doubts, bargaining, and outside-Dhaka courier booking.'}
-            </p>
-          </div>
+          ))}
         </div>
       </section>
 
@@ -781,6 +817,63 @@ export function LandingPage({
         </div>
         </>
         )}
+      </section>
+
+      {/* Pro FAQ Section */}
+      <section className="border-t border-slate-200 bg-white py-18">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <span className="text-xs font-bold tracking-wider text-rose-600 uppercase">
+              FAQ
+            </span>
+            <h2 className="mt-1.5 text-2xl font-extrabold text-slate-900 sm:text-3xl">
+              {lang === "bn"
+                ? "সচরাচর জিজ্ঞাসিত প্রশ্নাবলি"
+                : "Frequently Asked Questions"}
+            </h2>
+          </div>
+
+          <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-2">
+            {[
+              {
+                qBn: "মোবাইল ফোন থেকে কি সব কাজ করা যাবে?",
+                qEn: "Does it work completely on mobile phones?",
+                aBn: "জি ১০০%! মোবাইল ব্রাউজার অথবা 'অ্যাপ ইনস্টল' বাটন চেপে হোমস্ক্রিনে অ্যাপ বসিয়ে যেকোনো ফোন থেকেই পোস্টার ও ক্যাশ মেমো ডাউনলোড করতে পারবেন।",
+                aEn: "Yes! Everything works directly in mobile Chrome/Safari, or install it directly onto your phone Home Screen.",
+              },
+              {
+                qBn: "আমার দোকানের তথ্য ও পোস্টার কি আলাদা সেভ থাকবে?",
+                qEn: "Are my shop details and posters private to my account?",
+                aBn: "হ্যাঁ! নিজের মোবাইল নম্বর বা ইমেইল ও পাসওয়ার্ড দিয়ে ফ্রি অ্যাকাউন্ট খুললে আপনার দোকানের তথ্য ও সব পোস্টার শুধুমাত্র আপনার অ্যাকাউন্টেই সুরক্ষিত থাকবে।",
+                aEn: "Yes! Create your own password-protected account so your shop kit and saved posters remain completely private.",
+              },
+              {
+                qBn: "পোস্টারে বাংলা লেখা ভেঙে যাবে না তো?",
+                qEn: "Will Bengali fonts break on downloaded posters?",
+                aBn: "একেবারেই না। আমাদের কাস্টম ক্যানভাস ইঞ্জিনে ঝকঝকে ১০৮০×১০৮০ HD কোয়ালিটিতে যুক্তবর্ণসহ নিখুঁত বাংলা ছাপা হয়।",
+                aEn: "Never. Our dedicated studio engine renders razor-sharp Bengali typography at full 1080px HD resolution.",
+              },
+              {
+                qBn: "এখন ব্যবহার করতে কোনো টাকা বা কার্ড লাগবে কি?",
+                qEn: "Do I need a card or payment to start?",
+                aBn: "না! লঞ্চ অফারে এখন সব প্রিমিয়াম টুলস (পোস্টার, QR কোড, ক্যাশ মেমো, রিলস স্ক্রিপ্ট ও ক্যালকুলেটর) ১০০% ফ্রিতে ব্যবহার করতে পারবেন।",
+                aEn: "No credit card needed—enjoy instant free access to every studio feature today.",
+              },
+            ].map((item) => (
+              <div
+                key={item.qEn}
+                className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5"
+              >
+                <h3 className="text-sm font-extrabold text-slate-900">
+                  {lang === "bn" ? item.qBn : item.qEn}
+                </h3>
+                <p className="mt-2 text-xs leading-relaxed text-slate-600">
+                  {lang === "bn" ? item.aBn : item.aEn}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* Footer */}

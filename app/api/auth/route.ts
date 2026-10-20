@@ -5,7 +5,7 @@ import { AccountRecord, BrandKit, UserProfile } from "@/lib/types";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const db = readDb();
+    const db = await readDb();
     db.accounts = db.accounts || [];
 
     // 1. Founder Secret PIN Verification
@@ -105,7 +105,7 @@ export async function POST(req: Request) {
       };
 
       db.accounts.unshift(record);
-      writeDb(db);
+      await writeDb(db);
 
       return NextResponse.json({
         ok: true,
@@ -165,7 +165,7 @@ export async function POST(req: Request) {
       } else if (incoming.identifier && incoming.passwordHash) {
         db.accounts.unshift(incoming);
       }
-      writeDb(db);
+      await writeDb(db);
       return NextResponse.json({ ok: true });
     }
 

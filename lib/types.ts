@@ -49,7 +49,9 @@ export type PosterTemplateId =
   | "magenta_luxe"
   | "dark_executive"
   | "minimal_boutique"
-  | "flash_split";
+  | "flash_split"
+  | "festive_emerald"
+  | "crimson_flash";
 
 export type PosterAspect = "square" | "portrait";
 
@@ -124,6 +126,13 @@ export interface PosterConfig {
   highlights: string[];
   ctaText: string;
   productImageUrl: string;
+  showQr?: boolean;
+}
+
+export interface VideoScriptScene {
+  timeRange: string;
+  visualTip: string;
+  voiceover: string;
 }
 
 export interface Campaign {
@@ -136,6 +145,7 @@ export interface Campaign {
   posterConfig: PosterConfig;
   adCopies: AdCopyVariant[];
   inboxReplies: InboxReplyItem[];
+  videoScript?: VideoScriptScene[];
   sourceEngine: "cloud_ai" | "smart_engine";
   createdAt: string;
 }

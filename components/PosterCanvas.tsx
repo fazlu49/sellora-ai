@@ -7,6 +7,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import QRCode from "qrcode";
 import { BrandKit, PosterConfig } from "@/lib/types";
 import { formatBdt } from "@/lib/ai-engine";
 
@@ -273,7 +274,138 @@ export const PosterCanvas = forwardRef<PosterCanvasHandle, PosterCanvasProps>(
           ctx.restore();
         };
 
-        if (poster.templateId === "dark_executive") {
+        if (poster.templateId === "festive_emerald") {
+          // Royal Emerald & Gold Festive / Eid Edition
+          const eg = ctx.createLinearGradient(0, 0, W, H);
+          eg.addColorStop(0, "#022c22");
+          eg.addColorStop(0.55, "#064e3b");
+          eg.addColorStop(1, "#022c22");
+          ctx.fillStyle = eg;
+          ctx.fillRect(0, 0, W, H);
+
+          // Double Gold Border Frame
+          drawRoundedRect(ctx, 24, 24, W - 48, H - 48, 36);
+          ctx.strokeStyle = "rgba(251,191,36,0.55)";
+          ctx.lineWidth = 4;
+          ctx.stroke();
+
+          drawShopBadge(58, 52, true);
+
+          ctx.save();
+          ctx.font = `700 24px ${fontFamily}`;
+          const bw = Math.max(225, ctx.measureText(`🌙 ${poster.badgeText}`).width + 52);
+          drawRoundedRect(ctx, W - 58 - bw, 58, bw, 54, 27);
+          ctx.fillStyle = "#fbbf24";
+          ctx.fill();
+          ctx.fillStyle = "#022c22";
+          ctx.textAlign = "center";
+          ctx.fillText(`🌙 ${poster.badgeText}`, W - 58 - bw / 2, 94);
+          ctx.restore();
+
+          const imgY = 144;
+          const imgH = H === 1350 ? 640 : 485;
+          ctx.save();
+          drawRoundedRect(ctx, 58, imgY, W - 116, imgH, 30);
+          ctx.fillStyle = "#065f46";
+          ctx.fill();
+          ctx.restore();
+
+          if (loadedImg) {
+            drawCoverImage(ctx, loadedImg, 58, imgY, W - 116, imgH, 30);
+          } else {
+            drawPhotoPlaceholder(58, imgY, W - 116, imgH, true);
+          }
+
+          drawRoundedRect(ctx, 58, imgY, W - 116, imgH, 30);
+          ctx.strokeStyle = "#fbbf24";
+          ctx.lineWidth = 3.5;
+          ctx.stroke();
+
+          const cy = imgY + imgH + 54;
+          ctx.fillStyle = "#fef3c7";
+          ctx.font = `700 45px ${fontFamily}`;
+          const lines = wrapLines(ctx, poster.headline, W - 116, 2);
+          lines.forEach((l, i) => ctx.fillText(l, 58, cy + i * 54));
+
+          ctx.fillStyle = "#6ee7b7";
+          ctx.font = `500 24px ${fontFamily}`;
+          ctx.fillText(
+            poster.highlights.slice(0, 3).map((h) => `✦ ${h}`).join("   ").slice(0, 66),
+            58,
+            cy + lines.length * 54 + 14
+          );
+
+          const footY = H - 156;
+          drawRoundedRect(ctx, 58, footY, W - 116, 112, 26);
+          ctx.fillStyle = "#fbbf24";
+          ctx.fill();
+
+          ctx.fillStyle = "#022c22";
+          ctx.font = `700 46px ${fontFamily}`;
+          ctx.fillText(offerFormatted, 86, footY + 74);
+
+          ctx.textAlign = "right";
+          ctx.font = `700 28px ${fontFamily}`;
+          ctx.fillText(poster.ctaText, W - 86, footY + 70);
+          ctx.textAlign = "left";
+        } else if (poster.templateId === "crimson_flash") {
+          // Bold High-CTR Red & Yellow Flash Sale Poster
+          const rg = ctx.createLinearGradient(0, 0, W, H);
+          rg.addColorStop(0, "#991b1b");
+          rg.addColorStop(0.5, "#dc2626");
+          rg.addColorStop(1, "#7f1d1d");
+          ctx.fillStyle = rg;
+          ctx.fillRect(0, 0, W, H);
+
+          drawShopBadge(56, 46, true);
+
+          ctx.save();
+          ctx.font = `700 25px ${fontFamily}`;
+          const bw = Math.max(225, ctx.measureText(`⚡ ${poster.badgeText}`).width + 52);
+          drawRoundedRect(ctx, W - 56 - bw, 52, bw, 56, 16);
+          ctx.fillStyle = "#fde047";
+          ctx.fill();
+          ctx.fillStyle = "#09090b";
+          ctx.textAlign = "center";
+          ctx.fillText(`⚡ ${poster.badgeText}`, W - 56 - bw / 2, 89);
+          ctx.restore();
+
+          const imgY = 136;
+          const imgH = H === 1350 ? 645 : 495;
+          drawRoundedRect(ctx, 56, imgY, W - 112, imgH, 30);
+          ctx.fillStyle = "#ffffff";
+          ctx.fill();
+
+          if (loadedImg) {
+            drawCoverImage(ctx, loadedImg, 68, imgY + 12, W - 136, imgH - 24, 22);
+          } else {
+            drawPhotoPlaceholder(68, imgY + 12, W - 136, imgH - 24, false);
+          }
+
+          // Yellow Price Burst Pill
+          drawRoundedRect(ctx, W - 380, imgY + imgH - 122, 308, 106, 22);
+          ctx.fillStyle = "#fde047";
+          ctx.fill();
+          ctx.fillStyle = "#09090b";
+          ctx.font = `700 46px ${fontFamily}`;
+          ctx.fillText(offerFormatted, W - 354, imgY + imgH - 52);
+
+          const cy = imgY + imgH + 54;
+          ctx.fillStyle = "#ffffff";
+          ctx.font = `700 45px ${fontFamily}`;
+          const lines = wrapLines(ctx, poster.headline, W - 112, 2);
+          lines.forEach((l, i) => ctx.fillText(l, 56, cy + i * 54));
+
+          const footY = H - 126;
+          drawRoundedRect(ctx, 56, footY, W - 112, 88, 22);
+          ctx.fillStyle = "#09090b";
+          ctx.fill();
+          ctx.fillStyle = "#fde047";
+          ctx.font = `700 28px ${fontFamily}`;
+          ctx.textAlign = "center";
+          ctx.fillText(poster.ctaText, W / 2, footY + 55);
+          ctx.textAlign = "left";
+        } else if (poster.templateId === "dark_executive") {
           // Midnight Slate Luxury Template
           const bgGrad = ctx.createLinearGradient(0, 0, W, H);
           bgGrad.addColorStop(0, "#090d16");
@@ -703,6 +835,53 @@ export const PosterCanvas = forwardRef<PosterCanvasHandle, PosterCanvasProps>(
             footY + 80
           );
           ctx.textAlign = "left";
+        }
+
+        // Optional Scannable WhatsApp Order QR Code Badge (Top-Left of Photo Area)
+        if (poster.showQr) {
+          try {
+            const digits = (brandKit.phoneWhatsapp || "").replace(/\D/g, "");
+            const waText = encodeURIComponent(
+              `আসসালামু আলাইকুম, আমি "${poster.headline}" অর্ডার করতে চাই।`
+            );
+            const qrUrl = digits
+              ? `https://wa.me/88${digits.replace(/^88/, "")}?text=${waText}`
+              : "https://sellorabd.vercel.app";
+            const qrDataUrl = await QRCode.toDataURL(qrUrl, {
+              width: 140,
+              margin: 1,
+              color: { dark: "#0f172a", light: "#ffffff" },
+            });
+            const qrImg = new Image();
+            await new Promise<void>((resolve) => {
+              qrImg.onload = () => resolve();
+              qrImg.onerror = () => resolve();
+              qrImg.src = qrDataUrl;
+            });
+            if (!cancelled) {
+              const qx = 76;
+              const qy = poster.templateId === "magenta_luxe" ? (H === 1350 ? 390 : 330) : 162;
+              ctx.save();
+              ctx.shadowColor = "rgba(0,0,0,0.28)";
+              ctx.shadowBlur = 18;
+              drawRoundedRect(ctx, qx, qy, 134, 158, 18);
+              ctx.fillStyle = "#ffffff";
+              ctx.fill();
+              ctx.restore();
+              ctx.drawImage(qrImg, qx + 11, qy + 10, 112, 112);
+              ctx.fillStyle = "#be123c";
+              ctx.font = `700 15px ${fontFamily}`;
+              ctx.textAlign = "center";
+              ctx.fillText(
+                isEn ? "Scan to Order" : "স্ক্যান করে অর্ডার",
+                qx + 67,
+                qy + 142
+              );
+              ctx.textAlign = "left";
+            }
+          } catch {
+            // ignore QR generation errors
+          }
         }
       };
 

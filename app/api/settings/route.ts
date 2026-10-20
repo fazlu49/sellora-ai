@@ -4,7 +4,7 @@ import { readDb, writeDb } from "@/lib/db";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const db = readDb();
+    const db = await readDb();
 
     const expectedPin =
       db.settings.founderAdminPin || process.env.FOUNDER_ADMIN_PIN || "492026";
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
       db.settings.uddoktaPayApiKey = body.uddoktaPayApiKey.trim();
     }
 
-    writeDb(db);
+    await writeDb(db);
     return NextResponse.json({
       ok: true,
       activeAdminPin: db.settings.founderAdminPin,

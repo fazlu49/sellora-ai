@@ -5,7 +5,7 @@ import { PlanTier } from "@/lib/types";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const db = readDb();
+    const db = await readDb();
 
     // Admin action: approve or reject a pending personal MFS payment
     if (body.action === "review_payment" && body.paymentId) {
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
         } else {
           target.status = "rejected";
         }
-        writeDb(db);
+        await writeDb(db);
       }
       return NextResponse.json({
         ok: true,
@@ -82,7 +82,7 @@ export async function POST(req: Request) {
     };
 
     db.payments = [record, ...db.payments];
-    writeDb(db);
+    await writeDb(db);
 
     return NextResponse.json({
       ok: true,

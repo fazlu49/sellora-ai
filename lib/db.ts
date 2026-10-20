@@ -1,30 +1,46 @@
+import crypto from "crypto";
 import fs from "fs";
 import path from "path";
-import crypto from "crypto";
 import { DatabaseSchema, PLAN_CATALOG } from "./types";
-import { getSupabaseAdmin } from "./supabase";
 
 export { PLAN_CATALOG };
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const PRIMARY_DB_PATH = path.join(DATA_DIR, "db.json");
-const FALLBACK_DB_PATH = "/tmp/sellora-ai-db.json";
+export function normalizeIdentifier(raw: string): string {
+  const trimmed = String(raw || "").trim().toLowerCase();
+  if (trimmed.includes("@")) return trimmed;
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits.startsWith("880") && digits.length === 13) {
+    return digits.slice(2);
+  }
+  return digits || trimmed;
+}
 
-export function hashPassword(raw: string): string {
+export function hashPassword(password: string): string {
   return crypto
     .createHash("sha256")
-    .update(`sellora_v2_salt::${raw.trim()}`)
+    .update(`sellora_salt_2026:${password}`)
     .digest("hex");
 }
 
-export function normalizeIdentifier(raw: string): string {
-  return raw.trim().toLowerCase().replace(/\s+/g, "");
-}
+const IS_CLOUD = Boolean(process.env.VERCEL || process.env.LAMBDA_TASK_ROOT);
+const DB_DIR = IS_CLOUD ? "/tmp" : path.join(process.cwd(), "data");
+const DB_FILE = path.join(DB_DIR, "sellora-db-cache.json");
 
-function createSeedDatabase(): DatabaseSchema {
-  const blankBrand = {
+export const DEFAULT_DB: DatabaseSchema = {
+  user: {
+    id: "guest_session",
+    name: "",
+    email: "",
+    isGuest: true,
+    plan: "free",
+    credits: 5,
+    preferredLang: "bn",
+    onboarded: false,
+    createdAt: new Date().toISOString(),
+  },
+  brandKit: {
     shopName: "",
-    category: "general" as const,
+    category: "general",
     tagline: "",
     primaryColor: "#e11d48",
     accentColor: "#f59e0b",
@@ -34,99 +50,229 @@ function createSeedDatabase(): DatabaseSchema {
     deliveryOutsideDhaka: 130,
     paymentPolicy: "পণ্য হাতে পেয়ে দেখে পেমেন্ট — সারা দেশে হোম ডেলিভারি",
     logoDataUrl: "",
-  };
+  },
+  accounts: [],
+  campaigns: [],
+  payments: [],
+  waitlist: [],
+  settings: {
+    freeLaunchMode: true,
+    founderAdminPin: process.env.FOUNDER_ADMIN_PIN || "492026",
+    openRouterApiKey: process.env.OPENROUTER_API_KEY || "",
+    openAiApiKey: process.env.OPENAI_API_KEY || "",
+    aiModel: "google/gemini-2.5-flash",
+    supabaseUrl:
+      process.env.SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      deriveSupabaseUrlFromJwt(
+        process.env.SUPABASE_SERVICE_ROLE_KEY ||
+          process.env.SUPABASE_KEY ||
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+          ""
+      ),
+    supabaseKey:
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      "",
+    paymentApprovalMode: "auto",
+    merchantBkash: "01700-889911",
+    merchantNagad: "01800-889922",
+    uddoktaPayApiKey: process.env.UDDOKTAPAY_API_KEY || "",
+    uddoktaPayBaseUrl: "https://sandbox.uddoktapay.com/api/checkout-v2",
+  },
+};
 
-  return {
-    user: {
-      id: "guest_session",
-      name: "নতুন উদ্যোক্তা",
-      email: "",
-      isGuest: true,
-      plan: "free",
-      credits: 5,
-      preferredLang: "bn",
-      onboarded: false,
-      createdAt: new Date().toISOString(),
-    },
-    brandKit: blankBrand,
-    campaigns: [],
-    accounts: [],
-    payments: [],
-    waitlist: [],
-    settings: {
-      freeLaunchMode: true,
-      founderAdminPin: process.env.FOUNDER_ADMIN_PIN || "492026",
-      openRouterApiKey: process.env.OPENROUTER_API_KEY || "",
-      openAiApiKey: process.env.OPENAI_API_KEY || "",
-      aiModel: process.env.AI_MODEL || "openai/gpt-4o-mini",
-      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-      supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY || "",
-      paymentApprovalMode: "auto",
-      merchantBkash: "01700-889911",
-      merchantNagad: "01800-889922",
-      uddoktaPayApiKey: process.env.UDDOKTAPAY_API_KEY || "",
-      uddoktaPayBaseUrl:
-        process.env.UDDOKTAPAY_BASE_URL ||
-        "https://sandbox.uddoktapay.com/api/checkout-v2",
-    },
-  };
-}
-
-function resolveDbPath(): string {
-  if (process.env.VERCEL) {
-    return FALLBACK_DB_PATH;
-  }
+function deriveSupabaseUrlFromJwt(key: string): string {
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+    const parts = key.split(".");
+    if (parts.length === 3) {
+      const payload = JSON.parse(
+        Buffer.from(parts[1], "base64url").toString("utf-8")
+      );
+      if (payload?.ref && typeof payload.ref === "string") {
+        return `https://${payload.ref}.supabase.co`;
+      }
     }
-    return PRIMARY_DB_PATH;
   } catch {
-    return FALLBACK_DB_PATH;
+    // Ignore non-JWT publishable/secret keys
   }
+  return "";
 }
 
-export function readDb(): DatabaseSchema {
-  const dbPath = resolveDbPath();
+function getSupabaseCreds(fallbackDb?: DatabaseSchema) {
+  const rawKey = (
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    fallbackDb?.settings?.supabaseKey ||
+    ""
+  ).trim();
+
+  if (!rawKey || rawKey === "[ENV_PROTECTED]") return null;
+
+  const url = (
+    process.env.SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    fallbackDb?.settings?.supabaseUrl ||
+    deriveSupabaseUrlFromJwt(rawKey) ||
+    ""
+  )
+    .trim()
+    .replace(/\/+$/, "");
+
+  if (!url) return null;
+  return { url, key: rawKey };
+}
+
+function readLocalCache(): DatabaseSchema {
   try {
-    if (!fs.existsSync(dbPath)) {
-      const seed = createSeedDatabase();
-      fs.writeFileSync(dbPath, JSON.stringify(seed, null, 2), "utf-8");
-      return seed;
+    if (!fs.existsSync(DB_DIR)) {
+      fs.mkdirSync(DB_DIR, { recursive: true });
     }
-    const raw = fs.readFileSync(dbPath, "utf-8");
-    const parsed = JSON.parse(raw) as DatabaseSchema;
-    if (!Array.isArray(parsed.accounts)) parsed.accounts = [];
-    if (!parsed.settings.founderAdminPin) {
-      parsed.settings.founderAdminPin =
-        process.env.FOUNDER_ADMIN_PIN || "492026";
+    if (!fs.existsSync(DB_FILE)) {
+      return structuredClone(DEFAULT_DB);
     }
-    return parsed;
+    const raw = fs.readFileSync(DB_FILE, "utf-8");
+    const parsed = JSON.parse(raw) as Partial<DatabaseSchema>;
+    return {
+      ...DEFAULT_DB,
+      ...parsed,
+      user: { ...DEFAULT_DB.user, ...(parsed.user || {}) },
+      brandKit: { ...DEFAULT_DB.brandKit, ...(parsed.brandKit || {}) },
+      accounts: Array.isArray(parsed.accounts) ? parsed.accounts : [],
+      campaigns: Array.isArray(parsed.campaigns) ? parsed.campaigns : [],
+      payments: Array.isArray(parsed.payments) ? parsed.payments : [],
+      waitlist: Array.isArray(parsed.waitlist) ? parsed.waitlist : [],
+      settings: {
+        ...DEFAULT_DB.settings,
+        ...(parsed.settings || {}),
+        supabaseUrl:
+          process.env.SUPABASE_URL ||
+          process.env.NEXT_PUBLIC_SUPABASE_URL ||
+          parsed.settings?.supabaseUrl ||
+          "",
+        supabaseKey:
+          process.env.SUPABASE_SERVICE_ROLE_KEY ||
+          process.env.SUPABASE_KEY ||
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+          parsed.settings?.supabaseKey ||
+          "",
+      },
+    };
   } catch {
-    return createSeedDatabase();
+    return structuredClone(DEFAULT_DB);
   }
 }
 
-export function writeDb(data: DatabaseSchema): DatabaseSchema {
-  const dbPath = resolveDbPath();
+function writeLocalCache(data: DatabaseSchema) {
   try {
-    fs.writeFileSync(dbPath, JSON.stringify(data, null, 2), "utf-8");
-  } catch (err) {
-    console.error("Failed to write db:", err);
+    if (!fs.existsSync(DB_DIR)) {
+      fs.mkdirSync(DB_DIR, { recursive: true });
+    }
+    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), "utf-8");
+  } catch {
+    // Ignore transient fs cache errors on serverless runtimes
+  }
+}
+
+export async function readDb(): Promise<DatabaseSchema> {
+  const local = readLocalCache();
+  const creds = getSupabaseCreds(local);
+
+  if (creds) {
+    try {
+      const res = await fetch(
+        `${creds.url}/rest/v1/app_kv_store?key=eq.sellora_primary_state&select=payload&limit=1`,
+        {
+          method: "GET",
+          headers: {
+            apikey: creds.key,
+            Authorization: `Bearer ${creds.key}`,
+            Accept: "application/json",
+          },
+          cache: "no-store",
+        }
+      );
+
+      if (res.ok) {
+        const rows = (await res.json()) as Array<{
+          payload?: Partial<DatabaseSchema>;
+        }>;
+        const cloudPayload = rows?.[0]?.payload;
+        if (cloudPayload && typeof cloudPayload === "object") {
+          const merged: DatabaseSchema = {
+            ...DEFAULT_DB,
+            ...cloudPayload,
+            user: { ...DEFAULT_DB.user, ...(cloudPayload.user || {}) },
+            brandKit: {
+              ...DEFAULT_DB.brandKit,
+              ...(cloudPayload.brandKit || {}),
+            },
+            accounts: Array.isArray(cloudPayload.accounts)
+              ? cloudPayload.accounts
+              : [],
+            campaigns: Array.isArray(cloudPayload.campaigns)
+              ? cloudPayload.campaigns
+              : [],
+            payments: Array.isArray(cloudPayload.payments)
+              ? cloudPayload.payments
+              : [],
+            waitlist: Array.isArray(cloudPayload.waitlist)
+              ? cloudPayload.waitlist
+              : [],
+            settings: {
+              ...DEFAULT_DB.settings,
+              ...(cloudPayload.settings || {}),
+              supabaseUrl: creds.url,
+              supabaseKey: creds.key,
+            },
+          };
+          writeLocalCache(merged);
+          return merged;
+        }
+      }
+    } catch {
+      // Fallback to local cache on transient network issue
+    }
   }
 
-  const sb = getSupabaseAdmin(
-    data.settings.supabaseUrl,
-    data.settings.supabaseKey
-  );
-  if (sb) {
-    sb.from("app_kv_store")
-      .upsert({
-        key: "sellora_primary_state",
-        payload: data,
-        updated_at: new Date().toISOString(),
-      })
-      .then(() => {});
+  return local;
+}
+
+export async function writeDb(data: DatabaseSchema): Promise<DatabaseSchema> {
+  writeLocalCache(data);
+
+  const creds = getSupabaseCreds(data);
+  if (creds) {
+    try {
+      const sanitizedForCloud: DatabaseSchema = {
+        ...data,
+        settings: {
+          ...data.settings,
+          supabaseUrl: creds.url,
+          supabaseKey: "[ENV_PROTECTED]",
+        },
+      };
+
+      await fetch(`${creds.url}/rest/v1/app_kv_store`, {
+        method: "POST",
+        headers: {
+          apikey: creds.key,
+          Authorization: `Bearer ${creds.key}`,
+          "Content-Type": "application/json",
+          Prefer: "resolution=merge-duplicates,return=minimal",
+        },
+        body: JSON.stringify({
+          key: "sellora_primary_state",
+          payload: sanitizedForCloud,
+          updated_at: new Date().toISOString(),
+        }),
+        cache: "no-store",
+      });
+    } catch {
+      // Local cache already saved
+    }
   }
 
   return data;

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { readDb, writeDb } from "@/lib/db";
 
 export async function GET() {
-  const db = readDb();
+  const db = await readDb();
   const freeLaunchMode = db.settings.freeLaunchMode !== false;
 
   return NextResponse.json({
@@ -33,7 +33,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const db = readDb();
+    const db = await readDb();
 
     if (body.action === "join_waitlist") {
       const contact = String(body.contact || "").trim();
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
         createdAt: new Date().toISOString(),
       };
       db.waitlist = [entry, ...(db.waitlist || [])];
-      writeDb(db);
+      await writeDb(db);
       return NextResponse.json({ ok: true, waitlist: db.waitlist });
     }
 

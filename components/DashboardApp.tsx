@@ -3,6 +3,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { BrandLogo } from "./BrandLogo";
 import { PosterCanvas, PosterCanvasHandle } from "./PosterCanvas";
+import { InstallAppButton } from "./InstallAppButton";
+import { InvoiceGenerator } from "./InvoiceGenerator";
+import { ProfitCalculator } from "./ProfitCalculator";
 import {
   BrandKit,
   Campaign,
@@ -18,7 +21,9 @@ import {
 } from "@/lib/types";
 import {
   ArrowLeft,
+  Calculator,
   Check,
+  Clapperboard,
   Copy,
   CreditCard,
   Download,
@@ -30,6 +35,8 @@ import {
   LogOut,
   Menu,
   MessageSquareMore,
+  QrCode,
+  ReceiptText,
   RotateCcw,
   Send,
   Settings2,
@@ -42,7 +49,15 @@ import {
   Zap,
 } from "lucide-react";
 
-type TabId = "studio" | "inbox" | "brand" | "history" | "billing" | "founder";
+type TabId =
+  | "studio"
+  | "invoice"
+  | "calculator"
+  | "inbox"
+  | "brand"
+  | "history"
+  | "billing"
+  | "founder";
 
 interface DashboardAppProps {
   lang: Language;
@@ -169,6 +184,7 @@ export function DashboardApp({
     campaigns[0]?.posterConfig.headline || ""
   );
   const [fbFeedPreview, setFbFeedPreview] = useState(false);
+  const [showQrOnPoster, setShowQrOnPoster] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -546,6 +562,7 @@ export function DashboardApp({
         ? `Order Now: ${displayBrandForPoster.phoneWhatsapp}`
         : `অর্ডার করুন: ${displayBrandForPoster.phoneWhatsapp}`,
     productImageUrl,
+    showQr: showQrOnPoster,
   };
 
   const NAV_ITEMS: Array<{
@@ -562,10 +579,23 @@ export function DashboardApp({
       icon: LayoutTemplate,
     },
     {
+      id: "invoice",
+      labelBn: "ডিজিটাল ক্যাশ মেমো",
+      labelEn: "Cash Memo & Slip",
+      icon: ReceiptText,
+      badge: "NEW",
+    },
+    {
       id: "inbox",
       labelBn: "ইনবক্স ও কমেন্ট ক্লোজার",
       labelEn: "Inbox & Comment Closer",
       icon: MessageSquareMore,
+    },
+    {
+      id: "calculator",
+      labelBn: "লাভ ও বুস্ট ক্যালকুলেটর",
+      labelEn: "Profit & Boost ROI",
+      icon: Calculator,
     },
     {
       id: "brand",
@@ -685,7 +715,11 @@ export function DashboardApp({
             )}
           </div>
 
-          <nav className="mt-6 space-y-1.5">
+          <div className="mt-3 sm:hidden">
+            <InstallAppButton lang={lang} />
+          </div>
+
+          <nav className="mt-5 space-y-1.5">
             {NAV_ITEMS.map((item) => {
               const active = activeTab === item.id;
               return (
@@ -819,6 +853,10 @@ export function DashboardApp({
           </div>
 
           <div className="flex items-center gap-2">
+            <div className="hidden sm:block">
+              <InstallAppButton lang={lang} compact />
+            </div>
+
             <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-0.5 text-xs font-bold">
               <button
                 type="button"
@@ -1174,7 +1212,20 @@ export function DashboardApp({
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowQrOnPoster(!showQrOnPoster)}
+                        className={`inline-flex items-center gap-1 rounded-xl border px-3 py-2 text-xs font-bold transition ${
+                          showQrOnPoster
+                            ? "border-emerald-600 bg-emerald-50 text-emerald-800"
+                            : "border-slate-200 bg-slate-50 text-slate-600"
+                        }`}
+                      >
+                        <QrCode className="h-3.5 w-3.5" />
+                        <span>{lang === "bn" ? "QR কোড" : "QR Code"}</span>
+                      </button>
+
                       <button
                         type="button"
                         onClick={() => setFbFeedPreview(!fbFeedPreview)}
@@ -1184,7 +1235,7 @@ export function DashboardApp({
                             : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
                         }`}
                       >
-                        {lang === "bn" ? "FB Feed ভিউ" : "FB Feed Preview"}
+                        {lang === "bn" ? "FB ভিউ" : "FB Preview"}
                       </button>
 
                       <button
@@ -1198,19 +1249,29 @@ export function DashboardApp({
                       >
                         <Download className="h-4 w-4 text-rose-400" />
                         <span>
-                          {lang === "bn" ? "HD PNG ডাউনলোড" : "Download HD PNG"}
+                          {lang === "bn" ? "HD ডাউনলোড" : "Download PNG"}
                         </span>
                       </button>
                     </div>
                   </div>
 
-                  {/* 4 Template Switcher Pills */}
-                  <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {/* 6 Template Switcher Pills */}
+                  <div className="mb-4 grid grid-cols-3 gap-2">
                     {[
                       {
                         id: "magenta_luxe" as PosterTemplateId,
                         bn: "ম্যাজেন্টা লাক্স",
                         en: "Magenta Luxe",
+                      },
+                      {
+                        id: "festive_emerald" as PosterTemplateId,
+                        bn: "ঈদ / উৎসব লাক্স",
+                        en: "Festive Gold",
+                      },
+                      {
+                        id: "crimson_flash" as PosterTemplateId,
+                        bn: "ধামাকা ফ্ল্যাশ",
+                        en: "Flash Red",
                       },
                       {
                         id: "dark_executive" as PosterTemplateId,
@@ -1376,9 +1437,76 @@ export function DashboardApp({
                     })
                   )}
                 </div>
+                {/* 30-Second Viral Reels / TikTok Video Script */}
+                {activeCampaign?.videoScript?.length ? (
+                  <div className="rounded-3xl border border-slate-200 bg-slate-950 p-6 text-white shadow-sm">
+                    <div className="mb-4 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Clapperboard className="h-5 w-5 text-rose-400" />
+                        <h3 className="text-base font-extrabold">
+                          {lang === "bn"
+                            ? "৩০-সেকেন্ড ভাইরাল Reels ও TikTok ভিডিও স্ক্রিপ্ট"
+                            : "30-Second Viral Reels & TikTok Script"}
+                        </h3>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          copyText(
+                            "video_script_all",
+                            activeCampaign.videoScript!
+                              .map(
+                                (s) =>
+                                  `[${s.timeRange}]\n🎥 দৃশ্য: ${s.visualTip}\n🎙️ ভয়েস: "${s.voiceover}"`
+                              )
+                              .join("\n\n")
+                          )
+                        }
+                        className="rounded-xl bg-white/10 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-rose-600"
+                      >
+                        {copiedId === "video_script_all"
+                          ? lang === "bn"
+                            ? "কপি হয়েছে!"
+                            : "Copied!"
+                          : lang === "bn"
+                          ? "পুরো স্ক্রিপ্ট কপি"
+                          : "Copy Script"}
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {activeCampaign.videoScript.map((scene) => (
+                        <div
+                          key={scene.timeRange}
+                          className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="text-xs font-extrabold text-amber-300">
+                              ⏱️ {scene.timeRange}
+                            </span>
+                            <span className="text-[11px] text-slate-400">
+                              🎥 {scene.visualTip}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-sm leading-relaxed text-slate-100">
+                            &ldquo;{scene.voiceover}&rdquo;
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
           )}
+
+          {/* NEW PRO TAB: DIGITAL CASH MEMO & COURIER SLIP */}
+          {activeTab === "invoice" && (
+            <InvoiceGenerator lang={lang} brandKit={displayBrandForPoster} />
+          )}
+
+          {/* NEW PRO TAB: PROFIT & BOOST ROI CALCULATOR */}
+          {activeTab === "calculator" && <ProfitCalculator lang={lang} />}
 
           {/* TAB 2: INBOX & COMMENT CLOSER */}
           {activeTab === "inbox" && (

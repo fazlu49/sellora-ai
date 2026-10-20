@@ -236,6 +236,29 @@ export function buildSmartCampaign(input: GenerateInput): Campaign {
     },
   ];
 
+  const videoScript = [
+    {
+      timeRange: "০–৪ সেকেন্ড (হুক — স্ক্রল থামান)",
+      visualTip: "ক্যামেরার একদম সামনে পণ্যটি হাতে ধরে দেখান",
+      voiceover: `অনলাইনে অর্ডার করে ছবির সাথে মিল না পাওয়ার দিন শেষ! আজ আপনাদের দেখাচ্ছি ${brandKit.shopName}-এর সবচেয়ে জনপ্রিয় "${productName}"!`,
+    },
+    {
+      timeRange: "৫–১৫ সেকেন্ড (গুণাগুণ দেখান)",
+      visualTip: "পণ্যের ফিনিশিং, প্যাকিং বা কাছ থেকে ডিটেইল দেখান",
+      voiceover: `দেখুন এর নিখুঁত ফিনিশিং—${highlights[0]}, সাথে থাকছে ${highlights[1]}। হাতে নিলেই বুঝতে পারবেন কোয়ালিটি কতটা প্রিমিয়াম!`,
+    },
+    {
+      timeRange: "১৬–২৪ সেকেন্ড (ধামাকা অফার ও ভরসা)",
+      visualTip: "স্ক্রিনে দাম ও ক্যাশ অন ডেলিভারি লেখা দেখান",
+      voiceover: `এটার রেগুলার দাম ছিল ${priceRegBn}, কিন্তু আজকের অফারে পাচ্ছেন মাত্র ${priceOfferBn}! আগে ডেলিভারি ম্যানের সামনে পণ্য চেক করবেন, পছন্দ হলেই টাকা দেবেন।`,
+    },
+    {
+      timeRange: "২৫–৩০ সেকেন্ড (অর্ডার কল-টু-অ্যাকশন)",
+      visualTip: "নিচে মেসেজ বাটন ও WhatsApp নম্বরের দিকে ইশারা করুন",
+      voiceover: `স্টক শেষ হওয়ার আগেই নিচের Send Message বাটনে ক্লিক করুন অথবা WhatsApp করুন ${brandKit.phoneWhatsapp} নম্বরে!`,
+    },
+  ];
+
   return {
     id: `cmp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     productName: headline,
@@ -251,10 +274,11 @@ export function buildSmartCampaign(input: GenerateInput): Campaign {
       subline,
       highlights,
       ctaText,
-      productImageUrl: productImageUrl || "/samples/kurti.png",
+      productImageUrl: productImageUrl || "",
     },
     adCopies,
     inboxReplies,
+    videoScript,
     sourceEngine: "smart_engine",
     createdAt: new Date().toISOString(),
   };

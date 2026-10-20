@@ -9,7 +9,7 @@ import { BrandKit, Campaign } from "@/lib/types";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const db = readDb();
+    const db = await readDb();
 
     // Always prefer the caller's own shop BrandKit so every entrepreneur's output is 100% personalized
     const activeBrand: BrandKit = {
@@ -100,7 +100,7 @@ export async function POST(req: Request) {
       }
       account.brandKit = activeBrand;
       account.campaigns = [campaign, ...(account.campaigns || [])].slice(0, 30);
-      writeDb(db);
+      await writeDb(db);
     }
 
     return NextResponse.json({

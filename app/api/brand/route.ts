@@ -87,7 +87,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, extracted });
     }
 
-    const db = readDb();
+    const db = await readDb();
     const updatedBrand: BrandKit = {
       shopName: String(body.brandKit?.shopName || ""),
       category: body.brandKit?.category || "general",
@@ -108,7 +108,7 @@ export async function POST(req: Request) {
       const acc = db.accounts.find((a) => a.id === body.userId);
       if (acc) {
         acc.brandKit = updatedBrand;
-        writeDb(db);
+        await writeDb(db);
       }
     }
 
