@@ -318,14 +318,13 @@ async function callGeminiJson(
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          signal: AbortSignal.timeout(8500),
+          signal: AbortSignal.timeout(22000),
           body: JSON.stringify({
             contents: [{ parts }],
             generationConfig: {
               temperature: 0.72,
               maxOutputTokens: 4096,
               responseMimeType: "application/json",
-              thinkingConfig: { thinkingBudget: 0 },
             },
           }),
         }
