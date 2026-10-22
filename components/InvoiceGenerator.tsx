@@ -31,6 +31,11 @@ export function InvoiceGenerator({
   const [deliveryZone, setDeliveryZone] = useState<"inside" | "outside" | "free">(
     "inside"
   );
+  const [discountAmount, setDiscountAmount] = useState<string>("0");
+  const [orderNote, setOrderNote] = useState<string>("");
+  const [invoiceTheme, setInvoiceTheme] = useState<string>(
+    brandKit.primaryColor || "#e11d48"
+  );
   const [advancePaid, setAdvancePaid] = useState<string>("0");
   const [items, setItems] = useState<InvoiceItem[]>(() =>
     prefillItem && prefillItem.name
@@ -64,8 +69,9 @@ export function InvoiceGenerator({
     (sum, it) => sum + Number(it.qty || 0) * Number(it.price || 0),
     0
   );
+  const discountNum = Math.max(0, Number(discountAmount) || 0);
   const advanceNum = Math.max(0, Number(advancePaid) || 0);
-  const totalBill = subtotal + deliveryCharge;
+  const totalBill = Math.max(0, subtotal - discountNum) + deliveryCharge;
   const codDue = Math.max(0, totalBill - advanceNum);
 
   const addItem = () => {
@@ -119,7 +125,7 @@ export function InvoiceGenerator({
       canvas.height = H;
 
       const font = `"Hind Siliguri", "Plus Jakarta Sans", sans-serif`;
-      const primary = brandKit.primaryColor || "#e11d48";
+      const primary = invoiceTheme || brandKit.primaryColor || "#e11d48";
       const shopTitle = brandKit.shopName?.trim() || "আপনার অনলাইন শপ";
       const shopPhone = brandKit.phoneWhatsapp?.trim() || "01XXXXXXXXX";
       const isEn = lang === "en";
@@ -129,10 +135,10 @@ export function InvoiceGenerator({
       ctx.fillRect(0, 0, W, H);
 
       // Top Brand Header Banner
-      ctx.fillStyle = "#0f172a";
+      ctx.fillStyle = primary === "#0f172a" ? "#090d1a" : "#0f172a";
       ctx.fillRect(0, 0, W, 190);
       ctx.fillStyle = primary;
-      ctx.fillRect(0, 182, W, 8);
+      ctx.fillRect(0, 180, W, 10);
 
       // Shop Name & Contact Left
       ctx.fillStyle = "#ffffff";
@@ -212,7 +218,7 @@ export function InvoiceGenerator({
         `📍 ${(
           customerAddress.trim() ||
           (isEn ? "Full Delivery Address" : "কাস্টমারের সম্পূর্ণ ঠিকানা")
-        ).slice(0, 62)}`,
+        ).slice(0, 62)}${orderNote.trim() ? `  •  📝 ${orderNote.trim().slice(0, 28)}` : ""}`,
         84,
         352
       );
@@ -331,14 +337,38 @@ export function InvoiceGenerator({
 
       ctx.textAlign = "left";
       ctx.fillStyle = "#059669";
-      ctx.fillText(isEn ? "Advance Paid (-):" : "অগ্রিম জমা (-):", rightLabelX, sumY + 106);
+      ctx.fillText(
+        isEn ? "Advance / Discount (-):" : "অগ্রিম / ছাড় বাদে (-):",
+        rightLabelX,
+        sumY + 106
+      );
       ctx.textAlign = "right";
       ctx.fillText(
-        formatBdt(advanceNum, isEn ? "en" : "bn"),
+        formatBdt(advanceNum + discountNum, isEn ? "en" : "bn"),
         rightValX,
         sumY + 106
       );
       ctx.textAlign = "left";
+
+      // Payment Stamp Seal above QR
+      ctx.save();
+      const stampText =
+        codDue === 0 && totalBill > 0
+          ? "✓ FULL PAID"
+          : advanceNum > 0
+          ? "✓ ADVANCE CONFIRMED"
+          : "CASH ON DELIVERY";
+      ctx.strokeStyle = codDue === 0 && totalBill > 0 ? "#059669" : primary;
+      ctx.fillStyle = codDue === 0 && totalBill > 0 ? "#059669" : primary;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(230, sumY + 34, 232, 64, 14);
+      ctx.stroke();
+      ctx.font = `800 20px ${font}`;
+      ctx.textAlign = "center";
+      ctx.fillText(stampText, 346, sumY + 73);
+      ctx.textAlign = "left";
+      ctx.restore();
 
       // Highlighted COD Due Banner
       const dueBoxY = sumY + 128;
@@ -385,6 +415,10 @@ export function InvoiceGenerator({
     customerName,
     customerPhone,
     deliveryCharge,
+    discountNum,
+    invoiceTheme,
+    orderNote,
+    totalBill,
     advanceNum,
     items,
     invoiceNo,
@@ -575,6 +609,62 @@ export function InvoiceGenerator({
           </div>
         </div>
 
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-xs font-bold text-slate-700">
+              {lang === "bn" ? "স্পেশাল ছাড় (৳)" : "Discount (৳)"}
+            </label>
+            <input
+              type="number"
+              min={0}
+              value={discountAmount}
+              onChange={(e) => setDiscountAmount(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-rose-700"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-bold text-slate-700">
+              {lang === "bn" ? "সাইজ / কালার নোট" : "Size / Order Note"}
+            </label>
+            <input
+              type="text"
+              value={orderNote}
+              onChange={(e) => setOrderNote(e.target.value)}
+              placeholder={lang === "bn" ? "যেমন: লাল, L সাইজ" : "e.g. Red, Size L"}
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-800"
+            />
+          </div>
+        </div>
+
+        {/* 4 Branded Invoice Color Swatches */}
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-3.5 py-2.5">
+          <span className="text-xs font-bold text-slate-700">
+            {lang === "bn" ? "মেমোর ব্র্যান্ড রঙ:" : "Memo Theme Color:"}
+          </span>
+          <div className="flex items-center gap-2">
+            {[
+              { color: "#e11d48", label: "Rose" },
+              { color: "#059669", label: "Emerald" },
+              { color: "#1d4ed8", label: "Royal" },
+              { color: "#0f172a", label: "Dark" },
+            ].map((sw) => (
+              <button
+                key={sw.color}
+                type="button"
+                onClick={() => setInvoiceTheme(sw.color)}
+                className={`h-6 w-6 rounded-full ring-2 transition ${
+                  invoiceTheme === sw.color
+                    ? "scale-110 ring-slate-900"
+                    : "ring-white"
+                }`}
+                style={{ backgroundColor: sw.color }}
+                title={sw.label}
+              />
+            ))}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 gap-2.5 pt-2 sm:grid-cols-2">
           <button
             type="button"
@@ -609,6 +699,33 @@ export function InvoiceGenerator({
             )}
           </button>
         </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            const digits = customerPhone.replace(/\D/g, "");
+            const waMsg = encodeURIComponent(
+              `আসসালামু আলাইকুম ${customerName || "স্যার/ম্যাম"}! আপনার অর্ডার কনফার্ম হয়েছে 🎉\n🧾 মেমো নং: #${invoiceNo}\n🛍️ পণ্য: ${items
+                .map((i) => `${i.name || "পণ্য"} x${i.qty}`)
+                .join(", ")}\n💰 পরিশোধযোগ্য (COD): ৳${codDue}\n— ${
+                brandKit.shopName || "আমাদের অনলাইন শপ"
+              }`
+            );
+            window.open(
+              digits.length >= 10
+                ? `https://wa.me/${digits.startsWith("88") ? digits : `88${digits}`}?text=${waMsg}`
+                : `https://wa.me/?text=${waMsg}`,
+              "_blank"
+            );
+          }}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs font-extrabold text-emerald-800 transition hover:bg-emerald-100"
+        >
+          <span>
+            {lang === "bn"
+              ? "📲 ১ ক্লিকে কাস্টমারের WhatsApp-এ বিল পাঠান"
+              : "📲 Send Order Confirmation on WhatsApp"}
+          </span>
+        </button>
       </div>
 
       {/* Right Live HD Invoice Preview */}

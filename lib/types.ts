@@ -51,9 +51,11 @@ export type PosterTemplateId =
   | "minimal_boutique"
   | "flash_split"
   | "festive_emerald"
-  | "crimson_flash";
+  | "crimson_flash"
+  | "royal_navy"
+  | "sunset_coral";
 
-export type PosterAspect = "square" | "portrait";
+export type PosterAspect = "square" | "portrait" | "story";
 
 export interface UserProfile {
   id: string;
@@ -128,6 +130,14 @@ export interface PosterConfig {
   productImageUrl: string;
   showQr?: boolean;
   enhancePhoto?: boolean;
+  photoFit?: "contain" | "cover";
+  photoScale?: number;
+  photoOffsetY?: number;
+  hidePrice?: boolean;
+  freeDelivery?: boolean;
+  codBadge?: boolean;
+  customPrimaryColor?: string;
+  customAccentColor?: string;
 }
 
 export interface VideoScriptScene {

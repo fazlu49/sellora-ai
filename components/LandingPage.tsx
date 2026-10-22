@@ -91,12 +91,14 @@ const HERO_SAMPLES: Array<{
 ];
 
 const TEMPLATE_PILLS: Array<{ id: PosterTemplateId; bn: string; en: string }> = [
-  { id: "magenta_luxe", bn: "ম্যাজেন্টা লাক্স", en: "Magenta Luxe" },
-  { id: "festive_emerald", bn: "ঈদ / উৎসব লাক্স", en: "Festive Gold" },
-  { id: "crimson_flash", bn: "ধামাকা ফ্ল্যাশ", en: "Flash Red" },
-  { id: "dark_executive", bn: "ডার্ক প্রিমিয়াম", en: "Dark Studio" },
-  { id: "minimal_boutique", bn: "মিনিমাল বুটিক", en: "Minimal Boutique" },
-  { id: "flash_split", bn: "ফ্ল্যাশ স্প্লিট", en: "Flash Split" },
+  { id: "magenta_luxe", bn: "✦ ম্যাজেন্টা রয়্যাল", en: "Magenta Royal" },
+  { id: "festive_emerald", bn: "🌙 ঈদ এমেরাল্ড", en: "Emerald Gold" },
+  { id: "crimson_flash", bn: "🔥 ধামাকা ফ্ল্যাশ", en: "Flash Sale" },
+  { id: "dark_executive", bn: "⚡ ডার্ক নিওন", en: "Dark Neon" },
+  { id: "minimal_boutique", bn: "💎 মিনিমাল বুটিক", en: "Luxury Cream" },
+  { id: "flash_split", bn: "📰 স্প্লিট প্রো", en: "Split Studio" },
+  { id: "royal_navy", bn: "👑 রয়্যাল নেভি", en: "Royal Navy" },
+  { id: "sunset_coral", bn: "🌅 সানসেট কোরাল", en: "Sunset Coral" },
 ];
 
 export function LandingPage({
@@ -364,7 +366,7 @@ export function LandingPage({
               />
 
               {/* Template Style Selector Pills */}
-              <div className="mt-3.5 grid grid-cols-3 gap-1.5">
+              <div className="mt-3.5 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
                 {TEMPLATE_PILLS.map((tpl) => (
                   <button
                     key={tpl.id}

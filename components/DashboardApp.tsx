@@ -241,6 +241,16 @@ export function DashboardApp({
   const [openRouterKey, setOpenRouterKey] = useState("");
   const [openAiKey, setOpenAiKey] = useState("");
   const [enhancePhoto, setEnhancePhoto] = useState(true);
+  const [photoFit, setPhotoFit] = useState<"contain" | "cover">("contain");
+  const [photoScale, setPhotoScale] = useState<number>(1);
+  const [photoOffsetY, setPhotoOffsetY] = useState<number>(0);
+  const [hidePriceMode, setHidePriceMode] = useState<boolean>(false);
+  const [freeDeliveryBadge, setFreeDeliveryBadge] = useState<boolean>(false);
+  const [customSubline, setCustomSubline] = useState<string>("");
+  const [customCtaText, setCustomCtaText] = useState<string>("");
+  const [customPrimaryColor, setCustomPrimaryColor] = useState<string>("");
+  const [customAccentColor, setCustomAccentColor] = useState<string>("");
+  const [showProEditor, setShowProEditor] = useState<boolean>(true);
   const [scanningPhotoAi, setScanningPhotoAi] = useState(false);
   const [aiScanToast, setAiScanToast] = useState("");
   const [prefillMemoItem, setPrefillMemoItem] = useState<{
@@ -608,6 +618,7 @@ export function DashboardApp({
     badgeText: effectiveBadge,
     headline: effectiveHeadline,
     subline:
+      customSubline.trim() ||
       activeCampaign?.posterConfig?.subline ||
       (lang === "bn"
         ? "আজ অর্ডারে বিশেষ ছাড় • সীমিত স্টক!"
@@ -618,15 +629,23 @@ export function DashboardApp({
         : activeCampaign?.posterConfig?.highlights?.length
         ? activeCampaign.posterConfig.highlights
         : lang === "bn"
-        ? ["১০০% প্রিমিয়াম কোয়ালিটি", "হাতে পেয়ে পেমেন্ট"]
-        : ["100% Premium Quality", "Cash on Delivery"],
+        ? ["১০০% প্রিমিয়াম কোয়ালিটি", "হাতে পেয়ে পেমেন্ট", "সারা দেশে ডেলিভারি"]
+        : ["100% Premium Quality", "Cash on Delivery", "Nationwide Delivery"],
     ctaText:
-      copyStyle === "en"
+      customCtaText.trim() ||
+      (copyStyle === "en"
         ? `Order Now: ${displayBrandForPoster.phoneWhatsapp}`
-        : `অর্ডার করুন: ${displayBrandForPoster.phoneWhatsapp}`,
+        : `অর্ডার করুন: ${displayBrandForPoster.phoneWhatsapp}`),
     productImageUrl,
     showQr: showQrOnPoster,
     enhancePhoto,
+    photoFit,
+    photoScale,
+    photoOffsetY,
+    hidePrice: hidePriceMode,
+    freeDelivery: freeDeliveryBadge,
+    customPrimaryColor,
+    customAccentColor,
   };
 
   const NAV_ITEMS: Array<{
@@ -1291,8 +1310,9 @@ export function DashboardApp({
                       onChange={(e) => setAspect(e.target.value as PosterAspect)}
                       className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800 focus:border-rose-500 focus:outline-none"
                     >
-                      <option value="square">1:1 Square (1080×1080)</option>
-                      <option value="portrait">4:5 Boost Ad (1080×1350)</option>
+                      <option value="square">1:1 পোস্ট (1080×1080)</option>
+                      <option value="portrait">4:5 বুস্ট অ্যাড (1080×1350)</option>
+                      <option value="story">9:16 স্টোরি / রিলস (1080×1920)</option>
                     </select>
                   </div>
                 </div>
@@ -1430,53 +1450,248 @@ export function DashboardApp({
                     </div>
                   </div>
 
-                  {/* 6 Template Switcher Pills */}
-                  <div className="mb-4 grid grid-cols-3 gap-2">
+                  {/* 8 Commercial Agency Template Switcher Pills */}
+                  <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                     {[
                       {
                         id: "magenta_luxe" as PosterTemplateId,
-                        bn: "ম্যাজেন্টা লাক্স",
-                        en: "Magenta Luxe",
+                        bn: "✦ ম্যাজেন্টা রয়্যাল",
+                        en: "Magenta Royal",
                       },
                       {
                         id: "festive_emerald" as PosterTemplateId,
-                        bn: "ঈদ / উৎসব লাক্স",
-                        en: "Festive Gold",
+                        bn: "🌙 ঈদ এমেরাল্ড",
+                        en: "Emerald Gold",
                       },
                       {
                         id: "crimson_flash" as PosterTemplateId,
-                        bn: "ধামাকা ফ্ল্যাশ",
-                        en: "Flash Red",
+                        bn: "🔥 ধামাকা ফ্ল্যাশ",
+                        en: "Flash Sale",
                       },
                       {
                         id: "dark_executive" as PosterTemplateId,
-                        bn: "ডার্ক প্রিমিয়াম",
-                        en: "Dark Studio",
+                        bn: "⚡ ডার্ক নিওন টেক",
+                        en: "Dark Neon",
                       },
                       {
                         id: "minimal_boutique" as PosterTemplateId,
-                        bn: "মিনিমাল বুটিক",
-                        en: "Minimal Boutique",
+                        bn: "💎 মিনিমাল বুটিক",
+                        en: "Luxury Cream",
                       },
                       {
                         id: "flash_split" as PosterTemplateId,
-                        bn: "ফ্ল্যাশ স্প্লিট",
-                        en: "Flash Split",
+                        bn: "📰 ম্যাগাজিন স্প্লিট",
+                        en: "Split Studio",
+                      },
+                      {
+                        id: "royal_navy" as PosterTemplateId,
+                        bn: "👑 রয়্যাল নেভি",
+                        en: "Royal Navy",
+                      },
+                      {
+                        id: "sunset_coral" as PosterTemplateId,
+                        bn: "🌅 সানসেট কোরাল",
+                        en: "Sunset Coral",
                       },
                     ].map((tpl) => (
                       <button
                         key={tpl.id}
                         type="button"
                         onClick={() => setTemplateId(tpl.id)}
-                        className={`rounded-xl border px-3 py-2 text-xs font-bold transition ${
+                        className={`rounded-xl border px-2.5 py-2 text-xs font-extrabold transition ${
                           templateId === tpl.id
-                            ? "border-rose-600 bg-rose-50 text-rose-700"
-                            : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                            ? "border-rose-600 bg-rose-600 text-white shadow-xs"
+                            : "border-slate-200 bg-slate-50/70 text-slate-700 hover:bg-slate-100"
                         }`}
                       >
                         {lang === "bn" ? tpl.bn : tpl.en}
                       </button>
                     ))}
+                  </div>
+
+                  {/* Pro Studio Quick Controls Bar (No Default Lock!) */}
+                  <div className="mb-4 rounded-2xl border border-slate-200/90 bg-slate-50/90 p-3.5 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-xs font-extrabold text-slate-800">
+                        {lang === "bn"
+                          ? "🎨 প্রো ডিজাইন ও কাস্টমাইজ কন্ট্রোল (সব নিজের মতো বদলান)"
+                          : "🎨 Pro Studio Controls (Customize Everything)"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowProEditor(!showProEditor)}
+                        className="rounded-lg bg-white px-2.5 py-1 text-[11px] font-extrabold text-rose-600 shadow-2xs ring-1 ring-slate-200"
+                      >
+                        {showProEditor
+                          ? lang === "bn"
+                            ? "সংক্ষিপ্ত করুন"
+                            : "Compact"
+                          : lang === "bn"
+                          ? "সব অপশন খুলুন"
+                          : "All Controls"}
+                      </button>
+                    </div>
+
+                    {/* Smart Quick Toggle Chips */}
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPhotoFit(photoFit === "contain" ? "cover" : "contain")
+                        }
+                        className={`rounded-xl border px-3 py-1.5 text-[11px] font-bold transition ${
+                          photoFit === "contain"
+                            ? "border-indigo-300 bg-indigo-50 text-indigo-800"
+                            : "border-amber-300 bg-amber-50 text-amber-900"
+                        }`}
+                      >
+                        {photoFit === "contain"
+                          ? "🖼️ পুরো ছবি (No Crop)"
+                          : "📐 ফুল কভার (Fill)"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setHidePriceMode(!hidePriceMode)}
+                        className={`rounded-xl border px-3 py-1.5 text-[11px] font-bold transition ${
+                          hidePriceMode
+                            ? "border-fuchsia-400 bg-fuchsia-600 text-white"
+                            : "border-slate-200 bg-white text-slate-700"
+                        }`}
+                      >
+                        💬 {lang === "bn" ? "দাম লুকান (Inbox Mode)" : "Inbox Price"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setFreeDeliveryBadge(!freeDeliveryBadge)}
+                        className={`rounded-xl border px-3 py-1.5 text-[11px] font-bold transition ${
+                          freeDeliveryBadge
+                            ? "border-emerald-500 bg-emerald-600 text-white"
+                            : "border-slate-200 bg-white text-slate-700"
+                        }`}
+                      >
+                        🚚 {lang === "bn" ? "ফ্রি ডেলিভারি ব্যাজ" : "Free Delivery"}
+                      </button>
+                    </div>
+
+                    {showProEditor && (
+                      <div className="space-y-2.5 border-t border-slate-200/80 pt-2.5">
+                        {/* Zoom & Vertical Position Sliders */}
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <div>
+                            <div className="flex justify-between text-[11px] font-bold text-slate-600">
+                              <span>🔍 ছবির জুম ({Math.round(photoScale * 100)}%)</span>
+                              {photoScale !== 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setPhotoScale(1)}
+                                  className="text-rose-600"
+                                >
+                                  রিসেট
+                                </button>
+                              )}
+                            </div>
+                            <input
+                              type="range"
+                              min={0.75}
+                              max={1.35}
+                              step={0.03}
+                              value={photoScale}
+                              onChange={(e) => setPhotoScale(Number(e.target.value))}
+                              className="mt-1 w-full accent-rose-600"
+                            />
+                          </div>
+
+                          <div>
+                            <div className="flex justify-between text-[11px] font-bold text-slate-600">
+                              <span>↕️ ছবি উপরে / নিচে সরান</span>
+                              {photoOffsetY !== 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setPhotoOffsetY(0)}
+                                  className="text-rose-600"
+                                >
+                                  মাঝখানে
+                                </button>
+                              )}
+                            </div>
+                            <input
+                              type="range"
+                              min={-80}
+                              max={80}
+                              step={4}
+                              value={photoOffsetY}
+                              onChange={(e) => setPhotoOffsetY(Number(e.target.value))}
+                              className="mt-1 w-full accent-rose-600"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Direct Poster Text Overrides */}
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          <input
+                            type="text"
+                            value={customBadge}
+                            onChange={(e) => setCustomBadge(e.target.value)}
+                            placeholder="কাস্টম অফার ব্যাজ (যেমন: ঈদ ধামাকা অফার)"
+                            className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-900 placeholder:text-slate-400"
+                          />
+                          <input
+                            type="text"
+                            value={customSubline}
+                            onChange={(e) => setCustomSubline(e.target.value)}
+                            placeholder="কাস্টম সাব-লাইন (যেমন: ১০০% রঙ গ্যারান্টি)"
+                            className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-900 placeholder:text-slate-400"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-12 items-center">
+                          <input
+                            type="text"
+                            value={customCtaText}
+                            onChange={(e) => setCustomCtaText(e.target.value)}
+                            placeholder="নিচের অর্ডার বাটন লেখা বদলান (ঐচ্ছিক)"
+                            className="sm:col-span-7 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-900 placeholder:text-slate-400"
+                          />
+                          <div className="sm:col-span-5 flex items-center justify-end gap-2">
+                            <label className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-600">
+                              <span>বাটন রঙ:</span>
+                              <input
+                                type="color"
+                                value={customPrimaryColor || "#e11d48"}
+                                onChange={(e) => setCustomPrimaryColor(e.target.value)}
+                                className="h-6 w-6 cursor-pointer rounded border-0 bg-transparent p-0"
+                              />
+                            </label>
+                            <label className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-600">
+                              <span>ব্যাজ রঙ:</span>
+                              <input
+                                type="color"
+                                value={customAccentColor || "#fbbf24"}
+                                onChange={(e) => setCustomAccentColor(e.target.value)}
+                                className="h-6 w-6 cursor-pointer rounded border-0 bg-transparent p-0"
+                              />
+                            </label>
+                            {(customPrimaryColor || customAccentColor || customBadge || customSubline || customCtaText) && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setCustomPrimaryColor("");
+                                  setCustomAccentColor("");
+                                  setCustomBadge("");
+                                  setCustomSubline("");
+                                  setCustomCtaText("");
+                                }}
+                                className="rounded-lg bg-slate-200 px-2 py-1 text-[10px] font-bold text-slate-700"
+                              >
+                                রিসেট
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Optional Authentic Facebook Mobile Feed Wrapper */}
@@ -1538,23 +1753,32 @@ export function DashboardApp({
                       </div>
                     )}
 
-                    {/* 1-Click Poster Action Bridge: HD Export + Instant Cash Memo */}
-                    <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                    {/* 1-Click Poster Action Bridge: HD PNG + HD JPG + Instant Cash Memo */}
+                    <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
                       <button
                         type="button"
                         onClick={() =>
                           posterRef.current?.downloadPng(
-                            `sellora-${Date.now()}.png`
+                            `sellora-hd-${Date.now()}.png`
                           )
                         }
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-xs font-extrabold text-white shadow-xs transition hover:bg-rose-600"
+                        className="inline-flex items-center justify-center gap-1.5 rounded-2xl bg-slate-950 px-3.5 py-3 text-xs font-extrabold text-white shadow-xs transition hover:bg-rose-600"
                       >
                         <Download className="h-4 w-4 text-rose-400" />
-                        <span>
-                          {lang === "bn"
-                            ? "ফুল HD পোস্টার ডাউনলোড করুন"
-                            : "Download 1080p HD Poster"}
-                        </span>
+                        <span>{lang === "bn" ? "HD PNG ডাউনলোড" : "HD PNG"}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          posterRef.current?.downloadJpg?.(
+                            `sellora-hd-${Date.now()}.jpg`
+                          )
+                        }
+                        className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs font-extrabold text-slate-800 transition hover:bg-slate-100"
+                      >
+                        <Download className="h-4 w-4 text-indigo-600" />
+                        <span>{lang === "bn" ? "HD JPG ডাউনলোড" : "HD JPG"}</span>
                       </button>
 
                       <button
@@ -1569,14 +1793,10 @@ export function DashboardApp({
                             window.scrollTo({ top: 0, behavior: "smooth" });
                           }
                         }}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-extrabold text-emerald-800 transition hover:bg-emerald-100"
+                        className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-emerald-200 bg-emerald-50 px-3.5 py-3 text-xs font-extrabold text-emerald-800 transition hover:bg-emerald-100"
                       >
                         <ReceiptText className="h-4 w-4 text-emerald-700" />
-                        <span>
-                          {lang === "bn"
-                            ? "১ ক্লিকে এই পণ্যের ক্যাশ মেমো →"
-                            : "1-Click Cash Memo for This Item →"}
-                        </span>
+                        <span>{lang === "bn" ? "১ ক্লিকে মেমো →" : "Cash Memo →"}</span>
                       </button>
                     </div>
                   </div>
@@ -1744,9 +1964,48 @@ export function DashboardApp({
                     : "Paste Any Customer Comment or Inbox Question — Get a Persuasive Reply"}
                 </h2>
 
+                {/* 6 One-Click Customer Scenario Chips */}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {[
+                    {
+                      label: "💰 দাম কমাতে চায়",
+                      q: "ভাইয়া দাম একটু কমান না, আমি এখনই নিবো!",
+                    },
+                    {
+                      label: "🚚 ডেলিভারি কবে পাবে?",
+                      q: "ভাইয়া অর্ডার করলে কত দিনে হাতে পাবো আর ডেলিভারি চার্জ কত?",
+                    },
+                    {
+                      label: "🔍 আসল না নকল সন্দেহ",
+                      q: "ছবির সাথে বাস্তবে ১০০% মিল থাকবে তো? না মিললে ফেরত দেওয়া যাবে?",
+                    },
+                    {
+                      label: "📏 সাইজ / এক্সচেঞ্জ",
+                      q: "সাইজে ছোট বা বড় হলে চেঞ্জ করে নেওয়া যাবে কি?",
+                    },
+                    {
+                      label: "🤫 শুধু Price কমেন্ট",
+                      q: "Price please? দাম কত?",
+                    },
+                    {
+                      label: "✅ অর্ডার কনফার্ম মেসেজ",
+                      q: "আমার নাম রাফি, মিরপুর ১০, ঢাকা। ১ পিস অর্ডার কনফার্ম করুন।",
+                    },
+                  ].map((sc) => (
+                    <button
+                      key={sc.label}
+                      type="button"
+                      onClick={() => setCustomerMsg(sc.q)}
+                      className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700"
+                    >
+                      {sc.label}
+                    </button>
+                  ))}
+                </div>
+
                 <form
                   onSubmit={handleSmartReply}
-                  className="mt-4 flex flex-col gap-3 sm:flex-row"
+                  className="mt-3 flex flex-col gap-3 sm:flex-row"
                 >
                   <input
                     type="text"

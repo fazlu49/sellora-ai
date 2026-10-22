@@ -33,24 +33,62 @@ export function ProfitCalculator({ lang }: { lang: Language }) {
   const profitPerDelivered =
     deliveredOrders > 0 ? Math.round(netProfit / deliveredOrders) : 0;
 
+  // Recommended selling price for healthy ৳300 net profit per delivered parcel
+  const totalFixedPerDelivered =
+    deliveredOrders > 0
+      ? buyCost +
+        Math.round(
+          (totalPackagingCost + totalAdBdt + returnCourierLoss) /
+            deliveredOrders
+        )
+      : buyCost + 250;
+  const recommendedPrice = Math.ceil((totalFixedPerDelivered + 300) / 10) * 10;
+  const [copiedReport, setCopiedReport] = useState(false);
+
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-2xs">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
-            <Calculator className="h-5 w-5" />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
+              <Calculator className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-extrabold text-slate-900">
+                {lang === "bn"
+                  ? "প্রো লাভ, রিটার্ন লস ও Facebook Boost ক্যালকুলেটর"
+                  : "Pro Net Profit, Return Loss & Meta Ads Calculator"}
+              </h2>
+              <p className="text-xs text-slate-500">
+                {lang === "bn"
+                  ? "ডলার বুস্ট খরচ, প্যাকেজিং ও পার্সেল রিটার্ন বাদে আসল নিট লাভ ও সঠিক বিক্রয়মূল্য বের করুন!"
+                  : "Calculate pocket profit & ideal selling price after ad spend and returns."}
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-xl font-extrabold text-slate-900">
-              {lang === "bn"
-                ? "F-Commerce আসল লাভ ও Facebook Boost ক্যালকুলেটর"
-                : "F-Commerce True Net Profit & Meta Ads ROI Calculator"}
-            </h2>
-            <p className="text-xs text-slate-500">
-              {lang === "bn"
-                ? "ডলার বুস্ট খরচ, প্যাকেজিং ও পার্সেল রিটার্ন বাদ দেওয়ার পর আপনার পকেটে আসল কত টাকা লাভ থাকবে তা আগে থেকেই জেনে নিন!"
-                : "Calculate your exact pocket profit after USD ad spend, packaging, and courier return losses."}
-            </p>
+
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              { bn: "👗 ফ্যাশন", buy: 750, sell: 1450, pkg: 30, ad: 1.1, ret: 10 },
+              { bn: "🍯 ফুড", buy: 520, sell: 990, pkg: 45, ad: 0.9, ret: 5 },
+              { bn: "⌚ গ্যাজেট", buy: 1050, sell: 1890, pkg: 35, ad: 1.3, ret: 12 },
+              { bn: "💄 কসমেটিকস", buy: 480, sell: 950, pkg: 25, ad: 1.0, ret: 7 },
+            ].map((p) => (
+              <button
+                key={p.bn}
+                type="button"
+                onClick={() => {
+                  setBuyCost(p.buy);
+                  setSellPrice(p.sell);
+                  setPackagingCost(p.pkg);
+                  setAdCostUsdPerOrder(p.ad);
+                  setReturnRatePct(p.ret);
+                }}
+                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700"
+              >
+                {p.bn}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -210,6 +248,16 @@ export function ProfitCalculator({ lang }: { lang: Language }) {
                   ৳{profitPerDelivered.toLocaleString("en-IN")}
                 </strong>
               </p>
+              <div className="mt-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-200">
+                💡 অন্তত <strong>৳৩০০/পিস</strong> নিট লাভ রাখতে প্রস্তাবিত দাম:{" "}
+                <button
+                  type="button"
+                  onClick={() => setSellPrice(recommendedPrice)}
+                  className="ml-1 rounded-md bg-amber-400 px-2 py-0.5 text-[11px] font-black text-slate-950 hover:bg-amber-300"
+                >
+                  ৳{recommendedPrice} বসান
+                </button>
+              </div>
             </div>
 
             {netProfit > 0 ? (
@@ -223,10 +271,24 @@ export function ProfitCalculator({ lang }: { lang: Language }) {
               <div className="flex items-center gap-2 rounded-2xl bg-rose-500/20 p-3 text-xs font-bold text-rose-300">
                 <TriangleAlert className="h-4 w-4 shrink-0" />
                 <span>
-                  সতর্কতা: এই দামে বুস্ট করলে লস হবে! বিক্রয় মূল্য বাড়ান অথবা ২ পিস কম্বো অফার দিন।
+                  সতর্কতা: এই দামে বুস্ট করলে লস হবে! উপরের প্রস্তাবিত দামটি ব্যবহার করুন।
                 </span>
               </div>
             )}
+
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(
+                  `📊 লাভ রিপোর্ট (${totalOrders} অর্ডার)\nবিক্রয়মূল্য: ৳${sellPrice} | কেনা: ৳${buyCost}\nবুস্ট খরচ: ৳${totalAdBdt} | নিট লাভ: ৳${netProfit} (৳${profitPerDelivered}/পিস)`
+                );
+                setCopiedReport(true);
+                setTimeout(() => setCopiedReport(false), 1800);
+              }}
+              className="mt-3 w-full rounded-xl bg-white/10 py-2.5 text-xs font-bold text-white transition hover:bg-rose-600"
+            >
+              {copiedReport ? "✓ রিপোর্ট কপি হয়েছে!" : "📋 পুরো হিসাব রিপোর্ট কপি করুন"}
+            </button>
           </div>
         </div>
       </div>
