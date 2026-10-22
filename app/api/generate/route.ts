@@ -7,6 +7,8 @@ import {
 } from "@/lib/ai-engine";
 import { BrandKit, Campaign } from "@/lib/types";
 
+export const maxDuration = 60;
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();

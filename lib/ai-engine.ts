@@ -306,8 +306,8 @@ async function callGeminiJson(
   }
 
   const candidateModels = [
-    "gemini-3.8-flash",
     "gemini-flash-lite-latest",
+    "gemini-3.8-flash",
     "gemini-2.5-flash-lite",
   ];
 
@@ -318,6 +318,7 @@ async function callGeminiJson(
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          signal: AbortSignal.timeout(8500),
           body: JSON.stringify({
             contents: [{ parts }],
             generationConfig: {
