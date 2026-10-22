@@ -42,6 +42,8 @@ function drawRoundedRect(
   ctx.closePath();
 }
 
+let globalEnhancePhoto = true;
+
 function drawCoverImage(
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
@@ -54,6 +56,9 @@ function drawCoverImage(
   ctx.save();
   drawRoundedRect(ctx, x, y, w, h, radius);
   ctx.clip();
+  ctx.filter = globalEnhancePhoto
+    ? "contrast(1.07) saturate(1.13) brightness(1.03)"
+    : "none";
 
   const imgRatio = img.width / img.height;
   const boxRatio = w / h;
@@ -73,6 +78,7 @@ function drawCoverImage(
   }
 
   ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+  ctx.filter = "none";
   ctx.restore();
 }
 
@@ -158,6 +164,10 @@ export const PosterCanvas = forwardRef<PosterCanvasHandle, PosterCanvasProps>(
         active = false;
       };
     }, [poster.productImageUrl]);
+
+    useEffect(() => {
+      globalEnhancePhoto = poster.enhancePhoto !== false;
+    }, [poster.enhancePhoto]);
 
     useEffect(() => {
       if (!brandKit.logoDataUrl) {

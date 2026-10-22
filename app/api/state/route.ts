@@ -11,10 +11,16 @@ export async function GET() {
     waitlist: db.waitlist || [],
     totalAccountsCount: db.accounts?.length || 0,
     hasLiveAiKey: Boolean(
-      db.settings.openRouterApiKey?.trim() || db.settings.openAiApiKey?.trim()
+      process.env.GEMINI_API_KEY?.trim() ||
+        db.settings.geminiApiKey?.trim() ||
+        db.settings.openRouterApiKey?.trim() ||
+        db.settings.openAiApiKey?.trim()
     ),
     settingsPreview: {
       freeLaunchMode,
+      hasGemini: Boolean(
+        process.env.GEMINI_API_KEY?.trim() || db.settings.geminiApiKey?.trim()
+      ),
       hasOpenRouter: Boolean(db.settings.openRouterApiKey?.trim()),
       hasOpenAi: Boolean(db.settings.openAiApiKey?.trim()),
       hasSupabase: Boolean(

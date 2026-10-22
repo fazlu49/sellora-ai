@@ -127,6 +127,7 @@ export interface PosterConfig {
   ctaText: string;
   productImageUrl: string;
   showQr?: boolean;
+  enhancePhoto?: boolean;
 }
 
 export interface VideoScriptScene {
@@ -172,6 +173,7 @@ export interface WaitlistLead {
 export interface RuntimeSettings {
   freeLaunchMode?: boolean;
   founderAdminPin?: string;
+  geminiApiKey?: string;
   openRouterApiKey: string;
   openAiApiKey: string;
   aiModel: string;

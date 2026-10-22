@@ -70,6 +70,7 @@ interface DashboardAppProps {
   waitlist: WaitlistLead[];
   hasLiveAiKey: boolean;
   settingsPreview: {
+    hasGemini?: boolean;
     hasOpenRouter: boolean;
     hasOpenAi: boolean;
     hasSupabase?: boolean;
@@ -228,10 +229,25 @@ export function DashboardApp({
   const [adminPinError, setAdminPinError] = useState("");
   const [registeredUsers, setRegisteredUsers] = useState<RegisteredUserSummary[]>([]);
 
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.search.includes("admin=1")) {
+      setAdminPinModalOpen(true);
+    }
+  }, []);
+
   // Founder API Settings & Simulator state
   const [newAdminPin, setNewAdminPin] = useState("");
+  const [geminiApiKey, setGeminiApiKey] = useState("");
   const [openRouterKey, setOpenRouterKey] = useState("");
   const [openAiKey, setOpenAiKey] = useState("");
+  const [enhancePhoto, setEnhancePhoto] = useState(true);
+  const [scanningPhotoAi, setScanningPhotoAi] = useState(false);
+  const [aiScanToast, setAiScanToast] = useState("");
+  const [prefillMemoItem, setPrefillMemoItem] = useState<{
+    name: string;
+    price: number;
+  } | null>(null);
+  const previewCardRef = useRef<HTMLDivElement | null>(null);
   const [supabaseUrl, setSupabaseUrl] = useState("");
   const [supabaseKey, setSupabaseKey] = useState("");
   const [uddoktaKey, setUddoktaKey] = useState("");
@@ -487,6 +503,51 @@ export function DashboardApp({
     setMobileMenuOpen(false);
   };
 
+  const handleAiVisionScan = async (categoryHint?: string) => {
+    setScanningPhotoAi(true);
+    setAiScanToast("");
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "vision_autofill",
+          productImageUrl,
+          hintText: categoryHint || productName,
+        }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        if (json.productName) {
+          setProductName(json.productName);
+          setCustomHeadline(json.productName);
+        }
+        if (json.features) setFeatures(json.features);
+        if (!regularPriceInput && json.suggestedRegularPrice) {
+          setRegularPriceInput(String(json.suggestedRegularPrice));
+        }
+        if (!offerPriceInput && json.suggestedOfferPrice) {
+          setOfferPriceInput(String(json.suggestedOfferPrice));
+        }
+        if (json.suggestedTemplate) {
+          setTemplateId(json.suggestedTemplate);
+        }
+        setAiScanToast(
+          json.usedLiveVision
+            ? lang === "bn"
+              ? "✨ Gemini Vision AI ছবি দেখে সব তথ্য সাজিয়ে দিয়েছে!"
+              : "✨ Live Vision AI filled all product details!"
+            : lang === "bn"
+            ? "✨ AI স্মার্ট অ্যাসিস্ট্যান্ট পণ্যের তথ্য সাজিয়ে দিয়েছে!"
+            : "✨ AI Smart Assistant filled product details!"
+        );
+        setTimeout(() => setAiScanToast(""), 3500);
+      }
+    } finally {
+      setScanningPhotoAi(false);
+    }
+  };
+
   const handleSaveFounderSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingSettings(true);
@@ -499,6 +560,7 @@ export function DashboardApp({
           ...(newAdminPin.trim().length >= 4
             ? { newAdminPin: newAdminPin.trim() }
             : {}),
+          ...(geminiApiKey ? { geminiApiKey } : {}),
           ...(openRouterKey ? { openRouterApiKey: openRouterKey } : {}),
           ...(openAiKey ? { openAiApiKey: openAiKey } : {}),
           ...(supabaseUrl ? { supabaseUrl } : {}),
@@ -514,6 +576,7 @@ export function DashboardApp({
         setVerifiedAdminPin(json.activeAdminPin);
       }
       setNewAdminPin("");
+      setGeminiApiKey("");
       setOpenRouterKey("");
       setOpenAiKey("");
       setSupabaseUrl("");
@@ -563,6 +626,7 @@ export function DashboardApp({
         : `অর্ডার করুন: ${displayBrandForPoster.phoneWhatsapp}`,
     productImageUrl,
     showQr: showQrOnPoster,
+    enhancePhoto,
   };
 
   const NAV_ITEMS: Array<{
@@ -845,10 +909,11 @@ export function DashboardApp({
             <button
               type="button"
               onClick={onBackToLanding}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+              className="inline-flex shrink-0 whitespace-nowrap items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 sm:px-3"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
-              <span>{lang === "bn" ? "হোম পেজ" : "Home"}</span>
+              <span className="sm:hidden">{lang === "bn" ? "হোম" : "Home"}</span>
+              <span className="hidden sm:inline">{lang === "bn" ? "হোম পেজ" : "Home"}</span>
             </button>
           </div>
 
@@ -856,6 +921,26 @@ export function DashboardApp({
             <div className="hidden sm:block">
               <InstallAppButton lang={lang} compact />
             </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (isAdminUnlocked) {
+                  setActiveTab("founder");
+                } else {
+                  setAdminPinModalOpen(true);
+                }
+              }}
+              title="Founder Admin Access"
+              aria-label="Founder Admin Access"
+              className={`rounded-xl border p-2 transition ${
+                isAdminUnlocked
+                  ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                  : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+              }`}
+            >
+              <Lock className="h-4 w-4" />
+            </button>
 
             <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-0.5 text-xs font-bold">
               <button
@@ -886,10 +971,13 @@ export function DashboardApp({
               <button
                 type="button"
                 onClick={() => onOpenAuthModal("signup")}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-rose-700"
+                className="inline-flex shrink-0 whitespace-nowrap items-center gap-1 rounded-xl bg-rose-600 px-2.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-rose-700 sm:gap-1.5 sm:px-3"
               >
                 <LogIn className="h-3.5 w-3.5" />
-                <span>
+                <span className="sm:hidden">
+                  {lang === "bn" ? "অ্যাকাউন্ট" : "Sign Up"}
+                </span>
+                <span className="hidden sm:inline">
                   {lang === "bn" ? "অ্যাকাউন্ট খুলুন" : "Save Account"}
                 </span>
               </button>
@@ -902,15 +990,34 @@ export function DashboardApp({
         </header>
 
         {/* Workspace Tab Views */}
-        <main className="mx-auto w-full max-w-7xl flex-1 p-4 sm:p-6 lg:p-8">
+        <main className="mx-auto w-full max-w-7xl flex-1 p-4 pb-24 sm:p-6 sm:pb-24 lg:p-8 lg:pb-10">
           {/* TAB 1: AI POSTER & AD STUDIO */}
           {activeTab === "studio" && (
-            <div className="grid grid-cols-1 gap-7 xl:grid-cols-12">
+            <div className="grid grid-cols-1 items-start gap-7 xl:grid-cols-12">
               {/* Left Input Form Column */}
               <form
-                onSubmit={handleGenerate}
+                onSubmit={async (e) => {
+                  await handleGenerate(e);
+                  if (typeof window !== "undefined" && window.innerWidth < 1280) {
+                    setTimeout(() => {
+                      previewCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }, 150);
+                  }
+                }}
                 className="space-y-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-2xs sm:p-6 xl:col-span-5"
               >
+                {/* 3-Step Visual Workflow Guide */}
+                <div className="grid grid-cols-3 gap-1.5 rounded-2xl border border-slate-100 bg-slate-50/90 p-2 text-center text-[11px] font-extrabold">
+                  <div className="rounded-xl bg-white py-1.5 text-rose-700 shadow-2xs">
+                    {lang === "bn" ? "১. দোকান ও ছবি" : "1. Shop & Photo"}
+                  </div>
+                  <div className="rounded-xl py-1.5 text-slate-600">
+                    {lang === "bn" ? "২. AI তথ্য ও দাম" : "2. AI Info & Price"}
+                  </div>
+                  <div className="rounded-xl py-1.5 text-slate-600">
+                    {lang === "bn" ? "৩. HD ডাউনলোড" : "3. HD Export"}
+                  </div>
+                </div>
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <h2 className="text-lg font-extrabold text-slate-900">
@@ -1033,6 +1140,56 @@ export function DashboardApp({
                       className="hidden"
                     />
                   </label>
+
+                  {/* AI Magic Photo Scan & Category Smart Fill */}
+                  <div className="mt-2.5 rounded-2xl border border-indigo-100 bg-gradient-to-r from-rose-50/80 via-fuchsia-50/70 to-indigo-50/80 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-[11px] font-extrabold text-slate-800">
+                        {lang === "bn"
+                          ? "✨ নিজের মতো না লিখে AI দিয়ে সাজাতে চান?"
+                          : "✨ Want AI to write product details automatically?"}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={scanningPhotoAi}
+                        onClick={() => handleAiVisionScan()}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-fuchsia-600 px-3 py-1.5 text-[11px] font-extrabold text-white shadow-xs transition hover:opacity-95 disabled:opacity-60"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                        <span>
+                          {scanningPhotoAi
+                            ? lang === "bn"
+                              ? "AI লিখছে..."
+                              : "AI Scanning..."
+                            : lang === "bn"
+                            ? "AI অটো-ফিল করুন"
+                            : "AI Auto-Fill"}
+                        </span>
+                      </button>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {[
+                        { bn: "👗 ফ্যাশন", hint: "প্রিমিয়াম থ্রি-পিস ও পাঞ্জাবি" },
+                        { bn: "🍯 অর্গানিক ফুড", hint: "খাঁটি মধু ও ঘি" },
+                        { bn: "⌚ গ্যাজেট", hint: "স্মার্টওয়াচ ও ইয়ারবাড" },
+                        { bn: "💄 স্কিনকেয়ার", hint: "গ্লোয়িং স্কিনকেয়ার ক্রিম" },
+                      ].map((cat) => (
+                        <button
+                          key={cat.bn}
+                          type="button"
+                          onClick={() => handleAiVisionScan(cat.hint)}
+                          className="rounded-lg border border-white bg-white/90 px-2.5 py-1 text-[11px] font-bold text-slate-700 shadow-2xs transition hover:border-rose-300 hover:text-rose-700"
+                        >
+                          {cat.bn}
+                        </button>
+                      ))}
+                    </div>
+                    {aiScanToast && (
+                      <p className="mt-2 text-[11px] font-bold text-emerald-700">
+                        {aiScanToast}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 <div>
@@ -1195,16 +1352,21 @@ export function DashboardApp({
               </form>
 
               {/* Right Live Output Column */}
-              <div className="space-y-6 xl:col-span-7">
+              <div ref={previewCardRef} className="space-y-6 xl:col-span-7">
                 {/* Poster Card */}
                 <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-2xs sm:p-6">
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <h3 className="text-base font-extrabold text-slate-900">
-                        {lang === "bn"
-                          ? "লাইভ HD অফার পোস্টার প্রিভিউ (1080px)"
-                          : "Live HD Offer Poster Preview (1080px)"}
-                      </h3>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-base font-extrabold text-slate-900">
+                          {lang === "bn"
+                            ? "লাইভ HD অফার পোস্টার প্রিভিউ (1080px)"
+                            : "Live HD Offer Poster Preview (1080px)"}
+                        </h3>
+                        <span className="rounded-full bg-rose-50 px-2.5 py-0.5 text-[10px] font-extrabold text-rose-700">
+                          {hasLiveAiKey ? "Gemini Live AI ✓" : "AI Studio v4.0"}
+                        </span>
+                      </div>
                       <p className="text-xs text-slate-500">
                         {lang === "bn"
                           ? "বাম পাশে যা লিখবেন তা সাথে সাথে এখানে বসবে — পছন্দমতো ডিজাইন বেছে ডাউনলোড করুন"
@@ -1213,6 +1375,19 @@ export function DashboardApp({
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEnhancePhoto(!enhancePhoto)}
+                        className={`inline-flex items-center gap-1 rounded-xl border px-3 py-2 text-xs font-bold transition ${
+                          enhancePhoto
+                            ? "border-rose-300 bg-rose-50 text-rose-700"
+                            : "border-slate-200 bg-slate-50 text-slate-600"
+                        }`}
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                        <span>{lang === "bn" ? "HD লাইটিং" : "HD Light"}</span>
+                      </button>
+
                       <button
                         type="button"
                         onClick={() => setShowQrOnPoster(!showQrOnPoster)}
@@ -1362,6 +1537,48 @@ export function DashboardApp({
                         </span>
                       </div>
                     )}
+
+                    {/* 1-Click Poster Action Bridge: HD Export + Instant Cash Memo */}
+                    <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          posterRef.current?.downloadPng(
+                            `sellora-${Date.now()}.png`
+                          )
+                        }
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-xs font-extrabold text-white shadow-xs transition hover:bg-rose-600"
+                      >
+                        <Download className="h-4 w-4 text-rose-400" />
+                        <span>
+                          {lang === "bn"
+                            ? "ফুল HD পোস্টার ডাউনলোড করুন"
+                            : "Download 1080p HD Poster"}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPrefillMemoItem({
+                            name: effectiveHeadline,
+                            price: offerPriceNum || 0,
+                          });
+                          setActiveTab("invoice");
+                          if (typeof window !== "undefined") {
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }
+                        }}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-extrabold text-emerald-800 transition hover:bg-emerald-100"
+                      >
+                        <ReceiptText className="h-4 w-4 text-emerald-700" />
+                        <span>
+                          {lang === "bn"
+                            ? "১ ক্লিকে এই পণ্যের ক্যাশ মেমো →"
+                            : "1-Click Cash Memo for This Item →"}
+                        </span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -1502,7 +1719,11 @@ export function DashboardApp({
 
           {/* NEW PRO TAB: DIGITAL CASH MEMO & COURIER SLIP */}
           {activeTab === "invoice" && (
-            <InvoiceGenerator lang={lang} brandKit={displayBrandForPoster} />
+            <InvoiceGenerator
+              lang={lang}
+              brandKit={displayBrandForPoster}
+              prefillItem={prefillMemoItem}
+            />
           )}
 
           {/* NEW PRO TAB: PROFIT & BOOST ROI CALCULATOR */}
@@ -2311,6 +2532,25 @@ export function DashboardApp({
                   </div>
                 </div>
 
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
+                  <label className="mb-1 block text-xs font-extrabold text-emerald-900">
+                    ✨ Google Gemini 2.5 Flash API Key — ১০০% ফ্রি (সেরা সুপারিশকৃত){" "}
+                    {settingsPreview.hasGemini && (
+                      <span className="text-emerald-700">(Connected ✓)</span>
+                    )}
+                  </label>
+                  <p className="mb-2 text-[11px] text-emerald-800">
+                    aistudio.google.com/apikey থেকে ১০০% ফ্রি Key নিয়ে বসালেই ছবি দেখে অটো-ফিল ও কাস্টম বাংলা অ্যাড কপি লাইভ কাজ করবে!
+                  </p>
+                  <input
+                    type="password"
+                    value={geminiApiKey}
+                    onChange={(e) => setGeminiApiKey(e.target.value)}
+                    placeholder="AIzaSy..."
+                    className="w-full rounded-xl border border-emerald-300 bg-white px-3.5 py-2.5 font-mono text-xs"
+                  />
+                </div>
+
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
                     <label className="mb-1 block text-xs font-bold text-slate-700">
@@ -2408,6 +2648,68 @@ export function DashboardApp({
           )}
         </main>
       </div>
+
+      {/* Mobile Native App Fixed Bottom Navigation Bar */}
+      <nav
+        aria-label="Mobile Studio Navigation"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-slate-200/90 bg-white/95 px-1.5 py-1.5 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md lg:hidden"
+      >
+        {[
+          {
+            id: "studio" as TabId,
+            bn: "পোস্টার AI",
+            en: "Poster",
+            icon: LayoutTemplate,
+          },
+          {
+            id: "invoice" as TabId,
+            bn: "ক্যাশ মেমো",
+            en: "Memo",
+            icon: ReceiptText,
+          },
+          {
+            id: "inbox" as TabId,
+            bn: "ইনবক্স AI",
+            en: "Inbox",
+            icon: MessageSquareMore,
+          },
+          {
+            id: "calculator" as TabId,
+            bn: "লাভ হিসাব",
+            en: "Profit",
+            icon: Calculator,
+          },
+          {
+            id: "brand" as TabId,
+            bn: "দোকান সেট",
+            en: "Shop Kit",
+            icon: Store,
+          },
+        ].map((item) => {
+          const Icon = item.icon;
+          const active = activeTab === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => {
+                setActiveTab(item.id);
+                if (typeof window !== "undefined") {
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              }}
+              className={`flex flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 text-[10px] font-extrabold transition ${
+                active
+                  ? "bg-rose-50 text-rose-600"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              <span className="truncate">{lang === "bn" ? item.bn : item.en}</span>
+            </button>
+          );
+        })}
+      </nav>
 
       {/* Secret Founder Admin PIN Dialog */}
       {adminPinModalOpen && (

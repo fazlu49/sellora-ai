@@ -21,6 +21,9 @@ export async function POST(req: Request) {
     if (typeof body.freeLaunchMode === "boolean") {
       db.settings.freeLaunchMode = body.freeLaunchMode;
     }
+    if (typeof body.geminiApiKey === "string") {
+      db.settings.geminiApiKey = body.geminiApiKey.trim();
+    }
     if (typeof body.openRouterApiKey === "string") {
       db.settings.openRouterApiKey = body.openRouterApiKey.trim();
     }

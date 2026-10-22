@@ -110,6 +110,9 @@ export default function HomePage() {
 
       // Restore personal account or isolated guest session
       if (typeof window !== "undefined") {
+        if (window.location.search.includes("admin=1")) {
+          setView("dashboard");
+        }
         const activeId = localStorage.getItem(ACTIVE_SESSION_KEY);
         const vault = readLocalVault();
         const savedAccount = activeId

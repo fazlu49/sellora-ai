@@ -58,6 +58,7 @@ export const DEFAULT_DB: DatabaseSchema = {
   settings: {
     freeLaunchMode: true,
     founderAdminPin: process.env.FOUNDER_ADMIN_PIN || "492026",
+    geminiApiKey: process.env.GEMINI_API_KEY || "",
     openRouterApiKey: process.env.OPENROUTER_API_KEY || "",
     openAiApiKey: process.env.OPENAI_API_KEY || "",
     aiModel: "google/gemini-2.5-flash",

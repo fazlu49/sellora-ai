@@ -284,85 +284,338 @@ export function buildSmartCampaign(input: GenerateInput): Campaign {
   };
 }
 
+function extractDataUrlParts(dataUrl: string): { mimeType: string; data: string } | null {
+  if (!dataUrl || !dataUrl.startsWith("data:image/")) return null;
+  const idx = dataUrl.indexOf(";base64,");
+  if (idx === -1) return null;
+  return {
+    mimeType: dataUrl.slice(5, idx),
+    data: dataUrl.slice(idx + 8),
+  };
+}
+
+async function callGeminiJson(
+  prompt: string,
+  apiKey: string,
+  imageDataUrl?: string
+): Promise<Record<string, unknown> | null> {
+  const parts: Array<Record<string, unknown>> = [{ text: prompt }];
+  const img = imageDataUrl ? extractDataUrlParts(imageDataUrl) : null;
+  if (img) {
+    parts.unshift({ inline_data: { mime_type: img.mimeType, data: img.data } });
+  }
+
+  const candidateModels = [
+    "gemini-3.8-flash",
+    "gemini-flash-lite-latest",
+    "gemini-2.5-flash-lite",
+  ];
+
+  for (const modelName of candidateModels) {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts }],
+            generationConfig: {
+              temperature: 0.72,
+              maxOutputTokens: 4096,
+              responseMimeType: "application/json",
+              thinkingConfig: { thinkingBudget: 0 },
+            },
+          }),
+        }
+      );
+      if (!res.ok) continue;
+      const data = await res.json();
+      const rawText = (data?.candidates?.[0]?.content?.parts || [])
+        .map((p: { text?: string }) => p?.text || "")
+        .join("")
+        .trim()
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/\s*```$/i, "")
+        .trim();
+      if (!rawText) continue;
+      return JSON.parse(rawText);
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+export async function analyzeProductImageWithAi(
+  imageDataUrl: string,
+  hintText: string,
+  settings: RuntimeSettings
+): Promise<{
+  productName: string;
+  features: string;
+  suggestedRegularPrice: number;
+  suggestedOfferPrice: number;
+  suggestedTemplate: PosterTemplateId;
+  usedLiveVision: boolean;
+}> {
+  const geminiKey = (process.env.GEMINI_API_KEY || settings.geminiApiKey || "").trim();
+  const openRouterKey = (process.env.OPENROUTER_API_KEY || settings.openRouterApiKey || "").trim();
+  const openAiKey = (process.env.OPENAI_API_KEY || settings.openAiApiKey || "").trim();
+
+  const visionPrompt = `You are Bangladesh's #1 F-Commerce product specialist. Look closely at this product photo${hintText ? ` (Seller hint: "${hintText}")` : ""} and generate a high-converting Bengali product listing ready for a Facebook shop in Bangladesh.
+Return STRICT valid JSON only:
+{
+  "productName": "আকর্ষণীয় প্রফেশনাল বাংলা পণ্যের নাম (যেমন: প্রিমিয়াম জরজেট এমব্রয়ডারি পার্টি থ্রি-পিস)",
+  "features": "৪টি শক্তিশালী বাংলা সেলিং পয়েন্ট কমা দিয়ে আলাদা করা (রঙ/কাপড়/গুণমান, গ্যারান্টি, প্যাকেজিং, ক্যাশ অন ডেলিভারি)",
+  "suggestedRegularPrice": 1850,
+  "suggestedOfferPrice": 1450,
+  "suggestedTemplate": "magenta_luxe"
+}
+Allowed suggestedTemplate values: "magenta_luxe", "festive_emerald", "crimson_flash", "dark_executive", "minimal_boutique", "flash_split".`;
+
+  try {
+    if (geminiKey) {
+      const parsed = await callGeminiJson(visionPrompt, geminiKey, imageDataUrl);
+      if (parsed && typeof parsed.productName === "string") {
+        return {
+          productName: parsed.productName,
+          features: String(parsed.features || "১০০% প্রিমিয়াম কোয়ালিটি গ্যারান্টি, সারা দেশে ক্যাশ অন ডেলিভারি"),
+          suggestedRegularPrice: Number(parsed.suggestedRegularPrice || 1850),
+          suggestedOfferPrice: Number(parsed.suggestedOfferPrice || 1450),
+          suggestedTemplate: (parsed.suggestedTemplate as PosterTemplateId) || "magenta_luxe",
+          usedLiveVision: true,
+        };
+      }
+    }
+
+    const chatKey = openRouterKey || openAiKey;
+    if (chatKey) {
+      const endpoint = openRouterKey
+        ? "https://openrouter.ai/api/v1/chat/completions"
+        : "https://api.openai.com/v1/chat/completions";
+      const contentArr: Array<Record<string, unknown>> = [{ type: "text", text: visionPrompt }];
+      if (imageDataUrl && imageDataUrl.startsWith("data:image/")) {
+        contentArr.unshift({ type: "image_url", image_url: { url: imageDataUrl } });
+      }
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${chatKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: openRouterKey ? settings.aiModel || "google/gemini-2.5-flash" : "gpt-4o-mini",
+          messages: [{ role: "user", content: contentArr }],
+          response_format: { type: "json_object" },
+        }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        const txt = d?.choices?.[0]?.message?.content;
+        if (txt) {
+          const parsed = JSON.parse(txt);
+          return {
+            productName: String(parsed.productName || "প্রিমিয়াম স্পেশাল কালেকশন"),
+            features: String(parsed.features || "১০০% অরিজিনাল কোয়ালিটি, সারা দেশে হোম ডেলিভারি"),
+            suggestedRegularPrice: Number(parsed.suggestedRegularPrice || 1850),
+            suggestedOfferPrice: Number(parsed.suggestedOfferPrice || 1450),
+            suggestedTemplate: (parsed.suggestedTemplate as PosterTemplateId) || "magenta_luxe",
+            usedLiveVision: true,
+          };
+        }
+      }
+    }
+  } catch {
+    // Graceful fallback below
+  }
+
+  const h = (hintText || "").toLowerCase();
+  if (/মধু|ঘি|আচার|তেল|খাবার|খেজুর|বাদাম|চা|honey|ghee|food/.test(h)) {
+    return {
+      productName: hintText.trim() || "১০০% খাঁটি প্রাকৃতিক অর্গানিক ফুড প্যাক",
+      features: "কোনো কেমিক্যাল বা ভেজাল নেই, ল্যাব টেস্টেড খাঁটি মান, এয়ারটাইট ফুড-গ্রেড জারে প্যাকিং, হাতে পেয়ে স্বাদ দেখে পেমেন্ট",
+      suggestedRegularPrice: 1250,
+      suggestedOfferPrice: 990,
+      suggestedTemplate: "festive_emerald",
+      usedLiveVision: false,
+    };
+  }
+  if (/ঘড়ি|ইয়ার|হেডফোন|চার্জার|পাওয়ার|গ্যাজেট|watch|earbud|gadget/.test(h)) {
+    return {
+      productName: hintText.trim() || "প্রিমিয়াম স্মার্ট গ্যাজেট প্রো এডিশন",
+      features: "দীর্ঘস্থায়ী ব্যাটারি ব্যাকআপ, ক্রিস্টাল ক্লিয়ার পারফরম্যান্স, অফিশিয়াল রিপ্লেসমেন্ট ওয়ারেন্টি, ডেলিভারি ম্যানের সামনে চেক করার সুবিধা",
+      suggestedRegularPrice: 2290,
+      suggestedOfferPrice: 1690,
+      suggestedTemplate: "dark_executive",
+      usedLiveVision: false,
+    };
+  }
+  if (/ক্রিম|সিরাম|লোশন|সাবান|লিপস্টিক|স্কিন|cosmetic|serum|skin/.test(h)) {
+    return {
+      productName: hintText.trim() || "১০০% অরিজিনাল গ্লোয়িং স্কিনকেয়ার প্রোডাক্ট",
+      features: "১০০% অথেনটিক ইমপোর্টেড প্রোডাক্ট, সব ধরনের ত্বকের জন্য নিরাপদ, বারকোড স্ক্যান করে চেক করার সুবিধা, সারা দেশে ক্যাশ অন ডেলিভারি",
+      suggestedRegularPrice: 1450,
+      suggestedOfferPrice: 1090,
+      suggestedTemplate: "minimal_boutique",
+      usedLiveVision: false,
+    };
+  }
+
+  return {
+    productName: hintText.trim() || "প্রিমিয়াম এক্সক্লুসিভ ফ্যাশন কালেকশন",
+    features: "আরামদায়ক প্রিমিয়াম ফেব্রিক ও নিখুঁত ফিনিশিং, ১০০% রঙ ও কোয়ালিটি গ্যারান্টি, ছবির সাথে হুবহু মিল, পণ্য হাতে পেয়ে দেখে পেমেন্ট",
+    suggestedRegularPrice: 1950,
+    suggestedOfferPrice: 1490,
+    suggestedTemplate: "magenta_luxe",
+    usedLiveVision: false,
+  };
+}
+
 export async function generateCampaignWithAiOrFallback(
   input: GenerateInput,
   settings: RuntimeSettings
 ): Promise<Campaign> {
   const base = buildSmartCampaign(input);
-  const apiKey = settings.openRouterApiKey?.trim() || settings.openAiApiKey?.trim();
-  if (!apiKey) {
+  const geminiKey = (process.env.GEMINI_API_KEY || settings.geminiApiKey || "").trim();
+  const openRouterKey = (process.env.OPENROUTER_API_KEY || settings.openRouterApiKey || "").trim();
+  const openAiKey = (process.env.OPENAI_API_KEY || settings.openAiApiKey || "").trim();
+
+  if (!geminiKey && !openRouterKey && !openAiKey) {
     return base;
   }
 
-  const isOpenRouter = Boolean(settings.openRouterApiKey?.trim());
-  const endpoint = isOpenRouter
-    ? "https://openrouter.ai/api/v1/chat/completions"
-    : "https://api.openai.com/v1/chat/completions";
-  const model = isOpenRouter
-    ? settings.aiModel || "openai/gpt-4o-mini"
-    : "gpt-4o-mini";
-
-  try {
-    const prompt = `You are Bangladesh's top F-Commerce Facebook Ads strategist. Create marketing assets for:
-Shop: ${input.brandKit.shopName} (${input.brandKit.tagline})
-Phone/WhatsApp: ${input.brandKit.phoneWhatsapp}
-Delivery: Inside Dhaka ৳${input.brandKit.deliveryInsideDhaka}, Outside Dhaka ৳${input.brandKit.deliveryOutsideDhaka}
-Policy: ${input.brandKit.paymentPolicy}
-Product: ${input.productName}
+  const prompt = `You are Bangladesh's #1 agency F-Commerce creative director & direct-response copywriter. Generate a complete, conversion-optimized marketing campaign tailored specifically to this exact product and shop:
+Shop Name: ${input.brandKit.shopName} (${input.brandKit.tagline || "Trusted Online Store"})
+Order WhatsApp/Phone: ${input.brandKit.phoneWhatsapp}
+Delivery Charges: Inside Dhaka ৳${input.brandKit.deliveryInsideDhaka}, Outside Dhaka ৳${input.brandKit.deliveryOutsideDhaka}
+Payment Policy: ${input.brandKit.paymentPolicy}
+Product Name: ${input.productName}
 Regular Price: ৳${input.regularPrice}, Offer Price: ৳${input.offerPrice}
-Features: ${input.features}
-Output Language Style: ${input.copyStyle === "bn" ? "Natural persuasive Bengali script" : input.copyStyle === "banglish" ? "Natural Bangladeshi Banglish" : "Persuasive English"}
+Key Product Details: ${input.features}
+Language Style: ${input.copyStyle === "bn" ? "Natural, emotional, high-converting Bangladeshi Bengali (বাংলা)" : input.copyStyle === "banglish" ? "Natural trendy Bangladeshi Banglish" : "High-converting persuasive English"}
 
-Return strictly valid JSON matching:
+Return STRICT valid JSON with custom product-specific content matching this schema:
 {
-  "subline": "short punchy subline under 55 chars",
-  "highlights": ["point 1", "point 2", "point 3"],
+  "subline": "short punchy poster subline under 55 chars",
+  "highlights": ["product-specific point 1", "product-specific point 2", "product-specific point 3"],
   "adCopies": [
-    { "id": "offer_hook", "angleBn": "১. সরাসরি অফার ও আর্জেন্সি হুক", "angleEn": "1. Offer & Urgency Hook", "headline": "...", "body": "...", "ctaLine": "..." },
-    { "id": "trust_hook", "angleBn": "২. বিশ্বাস ও কোয়ালিটি হুক", "angleEn": "2. Trust & COD Angle", "headline": "...", "body": "...", "ctaLine": "..." },
-    { "id": "story_hook", "angleBn": "৩. স্টোরিটেলিং হুক", "angleEn": "3. Social Proof Hook", "headline": "...", "body": "...", "ctaLine": "..." }
+    { "id": "offer_hook", "angleBn": "১. সরাসরি অফার ও আর্জেন্সি হুক (Boost Best Seller)", "angleEn": "1. Direct Offer & Urgency Hook", "headline": "...", "body": "...", "ctaLine": "..." },
+    { "id": "trust_hook", "angleBn": "২. বিশ্বাস ও চেক-করে-পেমেন্ট গ্যারান্টি হুক", "angleEn": "2. Trust & Zero-Risk COD Angle", "headline": "...", "body": "...", "ctaLine": "..." },
+    { "id": "story_hook", "angleBn": "৩. কাস্টমার রিভিউ ও স্টোরিটেলিং হুক", "angleEn": "3. Customer Story & Social Proof Hook", "headline": "...", "body": "...", "ctaLine": "..." }
+  ],
+  "inboxReplies": [
+    { "id": "price_reply", "questionBn": "দাম কত ও অফার ডিটেইলস?", "questionEn": "Price & Offer Details", "tag": "ফাস্ট ক্লোজিং", "reply": "..." },
+    { "id": "quality_guarantee", "questionBn": "অরিজিনাল হবে তো? ছবির সাথে মিল থাকবে?", "questionEn": "Quality & Authenticity Check", "tag": "বিশ্বাস তৈরি", "reply": "..." },
+    { "id": "cod_delivery", "questionBn": "ডেলিভারি চার্জ ও কত দিনে পাবো?", "questionEn": "Delivery Charge & Timeline", "tag": "COD কনভার্শন", "reply": "..." },
+    { "id": "order_confirm", "questionBn": "অর্ডার কনফার্মেশন মেসেজ", "questionEn": "Order Confirmation Message", "tag": "কনফার্মেশন", "reply": "..." },
+    { "id": "comment_short", "questionBn": "কমেন্টের স্মার্ট পাবলিক রিপ্লাই", "questionEn": "Public Comment Reply", "tag": "রিচ বুস্টার", "reply": "..." }
+  ],
+  "videoScript": [
+    { "timeRange": "০–৪ সেকেন্ড (হুক — স্ক্রল থামান)", "visualTip": "...", "voiceover": "..." },
+    { "timeRange": "৫–১৫ সেকেন্ড (আসল বিশেষত্ব দেখান)", "visualTip": "...", "voiceover": "..." },
+    { "timeRange": "১৬–২৪ সেকেন্ড (অফার প্রাইস ও গ্যারান্টি)", "visualTip": "...", "voiceover": "..." },
+    { "timeRange": "২৫–৩০ সেকেন্ড (অর্ডার কল-টু-অ্যাকশন)", "visualTip": "...", "voiceover": "..." }
   ]
 }`;
 
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
-        temperature: 0.7,
-      }),
-    });
+  try {
+    let parsed: Record<string, unknown> | null = null;
 
-    if (!res.ok) return base;
-    const data = await res.json();
-    const content = data?.choices?.[0]?.message?.content;
-    if (!content) return base;
-    const parsed = JSON.parse(content);
+    if (geminiKey) {
+      parsed = await callGeminiJson(prompt, geminiKey, input.productImageUrl);
+    }
+
+    if (!parsed && (openRouterKey || openAiKey)) {
+      const apiKey = openRouterKey || openAiKey;
+      const endpoint = openRouterKey
+        ? "https://openrouter.ai/api/v1/chat/completions"
+        : "https://api.openai.com/v1/chat/completions";
+      const model = openRouterKey
+        ? settings.aiModel || "google/gemini-2.5-flash"
+        : "gpt-4o-mini";
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: prompt }],
+          response_format: { type: "json_object" },
+          temperature: 0.72,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const content = data?.choices?.[0]?.message?.content;
+        if (content) parsed = JSON.parse(content);
+      }
+    }
+
+    if (!parsed) return base;
 
     return {
       ...base,
       posterConfig: {
         ...base.posterConfig,
-        subline: parsed.subline || base.posterConfig.subline,
+        subline: typeof parsed.subline === "string" && parsed.subline ? parsed.subline : base.posterConfig.subline,
         highlights:
           Array.isArray(parsed.highlights) && parsed.highlights.length >= 3
-            ? parsed.highlights.slice(0, 3)
+            ? (parsed.highlights as string[]).slice(0, 3)
             : base.posterConfig.highlights,
       },
       adCopies:
         Array.isArray(parsed.adCopies) && parsed.adCopies.length >= 3
-          ? parsed.adCopies
+          ? (parsed.adCopies as AdCopyVariant[])
           : base.adCopies,
+      inboxReplies:
+        Array.isArray(parsed.inboxReplies) && parsed.inboxReplies.length >= 3
+          ? (parsed.inboxReplies as InboxReplyItem[])
+          : base.inboxReplies,
+      videoScript:
+        Array.isArray(parsed.videoScript) && parsed.videoScript.length >= 3
+          ? (parsed.videoScript as Campaign["videoScript"])
+          : base.videoScript,
       sourceEngine: "cloud_ai",
     };
   } catch {
     return base;
   }
+}
+
+export async function generateInstantCustomerReplyWithAi(
+  customerMessage: string,
+  campaign: Campaign,
+  brandKit: BrandKit,
+  settings: RuntimeSettings
+): Promise<string> {
+  const geminiKey = (process.env.GEMINI_API_KEY || settings.geminiApiKey || "").trim();
+  if (geminiKey) {
+    try {
+      const prompt = `You are a polite, persuasive Bangladeshi F-Commerce Messenger sales closer for the online shop "${brandKit.shopName}".
+Product: ${campaign.productName}
+Regular Price: ৳${campaign.regularPrice}, Special Offer Price: ৳${campaign.offerPrice}
+Key Highlights: ${campaign.features || campaign.posterConfig.highlights.join(", ")}
+Inside Dhaka Delivery: ৳${brandKit.deliveryInsideDhaka}, Outside Dhaka: ৳${brandKit.deliveryOutsideDhaka}
+Payment Policy: ${brandKit.paymentPolicy}
+Order WhatsApp: ${brandKit.phoneWhatsapp}
+
+Customer asked: "${customerMessage}"
+
+Write a warm, natural, concise Bengali reply (3–5 short lines max) that directly answers their exact question, builds trust, and ends by asking for their Name, Full Address & Mobile Number to confirm the order.
+Return STRICT JSON: { "reply": "..." }`;
+      const parsed = await callGeminiJson(prompt, geminiKey);
+      if (parsed && typeof parsed.reply === "string" && parsed.reply.trim()) {
+        return parsed.reply.trim();
+      }
+    } catch {
+      // fallback below
+    }
+  }
+  return generateInstantCustomerReply(customerMessage, campaign, brandKit);
 }
 
 export function generateInstantCustomerReply(

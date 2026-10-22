@@ -16,9 +16,11 @@ interface InvoiceItem {
 export function InvoiceGenerator({
   lang,
   brandKit,
+  prefillItem,
 }: {
   lang: Language;
   brandKit: BrandKit;
+  prefillItem?: { name: string; price: number } | null;
 }) {
   const [invoiceNo] = useState(
     () => `INV-${Math.floor(100000 + Math.random() * 900000)}`
@@ -30,10 +32,24 @@ export function InvoiceGenerator({
     "inside"
   );
   const [advancePaid, setAdvancePaid] = useState<string>("0");
-  const [items, setItems] = useState<InvoiceItem[]>([
-    { id: "it_1", name: "", qty: 1, price: 0 },
-  ]);
+  const [items, setItems] = useState<InvoiceItem[]>(() =>
+    prefillItem && prefillItem.name
+      ? [{ id: "it_1", name: prefillItem.name, qty: 1, price: prefillItem.price || 0 }]
+      : [{ id: "it_1", name: "", qty: 1, price: 0 }]
+  );
   const [copiedCourier, setCopiedCourier] = useState(false);
+
+  useEffect(() => {
+    if (prefillItem && prefillItem.name) {
+      setItems((prev) => {
+        if (prev.length === 1 && !prev[0].name.trim()) {
+          return [{ id: "it_1", name: prefillItem.name, qty: 1, price: prefillItem.price || 0 }];
+        }
+        if (prev[0]?.name === prefillItem.name) return prev;
+        return [{ id: "it_1", name: prefillItem.name, qty: 1, price: prefillItem.price || 0 }, ...prev.filter((p) => p.name.trim())];
+      });
+    }
+  }, [prefillItem]);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 

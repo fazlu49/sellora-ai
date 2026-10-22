@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { readDb, writeDb } from "@/lib/db";
 import {
+  analyzeProductImageWithAi,
   generateCampaignWithAiOrFallback,
-  generateInstantCustomerReply,
+  generateInstantCustomerReplyWithAi,
 } from "@/lib/ai-engine";
 import { BrandKit, Campaign } from "@/lib/types";
 
@@ -10,6 +11,15 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const db = await readDb();
+
+    if (body.action === "vision_autofill") {
+      const result = await analyzeProductImageWithAi(
+        String(body.productImageUrl || ""),
+        String(body.hintText || ""),
+        db.settings
+      );
+      return NextResponse.json({ ok: true, ...result });
+    }
 
     // Always prefer the caller's own shop BrandKit so every entrepreneur's output is 100% personalized
     const activeBrand: BrandKit = {
@@ -51,10 +61,11 @@ export async function POST(req: Request) {
         sourceEngine: "smart_engine",
         createdAt: new Date().toISOString(),
       };
-      const reply = generateInstantCustomerReply(
+      const reply = await generateInstantCustomerReplyWithAi(
         String(body.customerMessage || ""),
         fallbackCampaign,
-        activeBrand
+        activeBrand,
+        db.settings
       );
       return NextResponse.json({ ok: true, reply });
     }

@@ -385,6 +385,125 @@ export function LandingPage({
         </div>
       </section>
 
+      {/* Enterprise Trust & Capability Ribbon + 3-Step Visual Workflow */}
+      <section className="border-b border-slate-200/80 bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+            {[
+              {
+                statBn: "১০ সেকেন্ডে রেডি",
+                statEn: "10-Second Output",
+                subBn: "HD পোস্টার, অ্যাড ও রিলস স্ক্রিপ্ট",
+                subEn: "HD Poster, Ad Copy & Reels",
+              },
+              {
+                statBn: "Gemini Vision AI",
+                statEn: "Gemini Vision AI",
+                subBn: "ছবি দেখে অটো পণ্যের তথ্য সাজানো",
+                subEn: "Auto Product Copy from Photo",
+              },
+              {
+                statBn: "মোবাইল + কম্পিউটার",
+                statEn: "Mobile + Desktop Pro",
+                subBn: "যেকোনো ডিভাইসে অ্যাপের মতো স্মুথ",
+                subEn: "App-Grade UX on Every Screen",
+              },
+              {
+                statBn: "১০০% ফ্রি অ্যাক্সেস",
+                statEn: "100% Free Access",
+                subBn: "কোনো কার্ড বা পেমেন্ট ছাড়াই শুরু",
+                subEn: "Zero Card or Payment Required",
+              },
+            ].map((item) => (
+              <div
+                key={item.statEn}
+                className="rounded-2xl border border-slate-100 bg-slate-50/75 p-4 text-center sm:text-left"
+              >
+                <p className="text-base font-extrabold text-slate-900 sm:text-lg">
+                  {lang === "bn" ? item.statBn : item.statEn}
+                </p>
+                <p className="mt-0.5 text-xs font-medium text-slate-500">
+                  {lang === "bn" ? item.subBn : item.subEn}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* 3-Step Effortless Workflow Strip */}
+          <div className="mt-8 rounded-3xl bg-slate-950 p-6 text-white sm:p-8">
+            <div className="mb-6 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+              <div>
+                <span className="text-xs font-extrabold tracking-wider text-rose-400 uppercase">
+                  {lang === "bn"
+                    ? "একদম সহজ ৩ ধাপের ম্যাজিক ওয়ার্কফ্লো"
+                    : "Effortless 3-Step Studio Workflow"}
+                </span>
+                <h3 className="mt-1 text-xl font-extrabold sm:text-2xl">
+                  {lang === "bn"
+                    ? "ডিজাইন না জানলেও মাত্র ১৫ সেকেন্ডে প্রফেশনাল আউটপুট"
+                    : "Agency-Grade Marketing in 15 Seconds — Zero Design Skills Needed"}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={onOpenDashboard}
+                className="inline-flex items-center gap-1.5 self-start rounded-xl bg-rose-600 px-4 py-2.5 text-xs font-extrabold text-white transition hover:bg-rose-500 sm:self-auto"
+              >
+                <span>{lang === "bn" ? "এখনই টেস্ট করুন" : "Try Studio Now"}</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              {[
+                {
+                  step: "০১",
+                  titleBn: "পণ্যের ছবি আপলোড করুন",
+                  titleEn: "1. Upload Product Photo",
+                  descBn:
+                    "ফোন গ্যালারি বা কম্পিউটার থেকে যেকোনো পণ্যের ছবি দিন—AI অটো-ফিল বাটনে চাপ দিলেই পণ্যের বিবরণ তৈরি হয়ে যাবে।",
+                  descEn:
+                    "Pick any photo from your phone or PC and click AI Auto-Fill to write rich product copy instantly.",
+                },
+                {
+                  step: "০২",
+                  titleBn: "AI সব সাজিয়ে দেবে এক ক্লিকে",
+                  titleEn: "2. AI Builds Full Campaign",
+                  descBn:
+                    "১০৮০px অফার পোস্টার, QR কোড, ৩টি ফেসবুক বুস্ট ক্যাপশন, ইনবক্স রিপ্লাই ও ৩০ সেকেন্ডের রিলস স্ক্রিপ্ট একসাথে রেডি!",
+                  descEn:
+                    "Instantly get 1080p HD posters, QR codes, 3 Boost ad hooks, inbox replies, and a 30s Reels script.",
+                },
+                {
+                  step: "০৩",
+                  titleBn: "ডাউনলোড করুন ও ১ ক্লিকে মেমো বানান",
+                  titleEn: "3. Download & Issue Cash Memo",
+                  descBn:
+                    "পোস্টার ডাউনলোড করে পেজে দিন এবং অর্ডার আসলেই ১ ক্লিকে সেই পণ্যের ডিজিটাল ক্যাশ মেমো ও কুরিয়ার স্লিপ পাঠান!",
+                  descEn:
+                    "Post to Facebook and turn incoming orders into branded digital cash memos & courier slips in one tap.",
+                },
+              ].map((st) => (
+                <div
+                  key={st.step}
+                  className="rounded-2xl border border-white/10 bg-white/5 p-5"
+                >
+                  <span className="inline-block rounded-lg bg-rose-600/25 px-2.5 py-1 text-xs font-black text-rose-300">
+                    STEP {st.step}
+                  </span>
+                  <h4 className="mt-3 text-base font-extrabold text-white">
+                    {lang === "bn" ? st.titleBn : st.titleEn}
+                  </h4>
+                  <p className="mt-1.5 text-xs leading-relaxed text-slate-300">
+                    {lang === "bn" ? st.descBn : st.descEn}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Core 3 Value Pillars */}
       <section id="features" className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
